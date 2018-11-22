@@ -3,7 +3,7 @@ UNAME_S = $(shell uname -s)
 OBJ = main.o loadelf.o parseMips.o helper.o profileMips.o githash.o branch_predictor.o
 
 ifeq ($(UNAME_S),Linux)
-	CXX = clang++-4 -march=native -flto
+	CXX = clang++-4.0 -march=native -flto
 	EXTRA_LD = -ldl -lffi -lbfd -lunwind -lboost_system -lboost_program_options
 endif
 

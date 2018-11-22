@@ -160,7 +160,8 @@ int main(int argc, char *argv[]) {
 	    << KNRM  << "\n";
     
   double br_r = static_cast<double>(globals::correct_br_pred) / globals::num_br;
-  std::cerr << (100.0*br_r) << " branches predicted correctly\n";
+  std::cerr << KGRN << (100.0*br_r) << "\% branches predicted correctly"
+	    << KNRM << "\n";
   
   munmap(mempt, 1UL<<32);
   if(globals::sysArgv) {
