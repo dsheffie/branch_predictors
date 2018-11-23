@@ -72,6 +72,7 @@ int main(int argc, char *argv[]) {
   std::cerr << KGRN
 	    << "MIPS INTERP : built "
 	    << __DATE__ << " " << __TIME__
+    	    << ",hostname="<<gethostname()
 	    << ",pid="<< getpid() << "\n"
     	    << "git hash=" << githash
 	    << KNRM << "\n";

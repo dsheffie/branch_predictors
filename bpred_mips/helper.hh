@@ -30,7 +30,7 @@ void dbt_backtrace();
 #endif
 
 double timestamp();
-
+std::string gethostname();
 uint32_t update_crc(uint32_t crc, uint8_t *buf, size_t len);
 uint32_t crc32(uint8_t *buf, size_t len);
 

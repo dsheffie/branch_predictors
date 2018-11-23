@@ -1,3 +1,4 @@
+#include <cassert>
 
 #include <sys/time.h>
 #include <time.h>
@@ -5,6 +6,7 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
+
 
 #define UNW_LOCAL_ONLY
 #include <libunwind.h>
@@ -148,4 +150,12 @@ void dbt_backtrace() {
       std::printf(" -- error: unable to obtain symbol name for this frame\n");
     }
   }
+}
+
+
+std::string gethostname() {
+  char buf[80];
+  int rc = gethostname(buf,sizeof(buf)/sizeof(buf[0]));
+  assert(rc==0);
+  return std::string(buf);
 }
