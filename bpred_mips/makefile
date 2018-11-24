@@ -1,9 +1,14 @@
 UNAME_S = $(shell uname -s)
+UNAME_M = $(shell uname -m)
 
 OBJ = main.o loadelf.o parseMips.o helper.o profileMips.o githash.o branch_predictor.o
+HOST =
+ifeq ($(UNAME_M), x86_64)
+	HOST = -march=native -flto
+endif
 
 ifeq ($(UNAME_S),Linux)
-	CXX = clang++-4.0 -march=native -flto
+	CXX = clang++-4.0 $(HOST)
 	EXTRA_LD = -ldl -lffi -lbfd -lunwind -lboost_system -lboost_program_options
 endif
 
