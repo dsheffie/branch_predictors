@@ -396,11 +396,7 @@ void branch(uint32_t inst, state_t *s) {
   if(takeBranch) {
     globals::bhr->set_bit(0);
   }
-  if(takeBranch==bp) {
-    globals::correct_br_pred++;
-  }
-  globals::num_br++;
-  globals::bpred->update(s->pc, idx, takeBranch);
+  globals::bpred->update(s->pc, idx, bp, takeBranch);
   
   s->pc += 4;
   if(isLikely) {

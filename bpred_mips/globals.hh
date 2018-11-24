@@ -12,8 +12,6 @@ namespace globals {
   extern bool isMipsEL;
   extern sim_bitvec* bhr;
   extern branch_predictor *bpred;
-  extern uint64_t num_br;
-  extern uint64_t correct_br_pred;
 };
 
 #endif

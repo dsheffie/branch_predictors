@@ -31,10 +31,8 @@ bool globals::enClockFuncts = false;
 bool globals::isMipsEL = false;
 sim_bitvec* globals::bhr = nullptr;
 branch_predictor* globals::bpred = nullptr;
-uint64_t globals::num_br = 0;
-uint64_t globals::correct_br_pred = 0;
 
-static state_t *s =0;
+static state_t *s = nullptr;
 
 static int buildArgcArgv(const char *filename, const std::string &sysArgs, char **&argv){
   int cnt = 0;
@@ -162,9 +160,7 @@ int main(int argc, char *argv[]) {
 	    << (s->icnt/runtime)*1e-6 << "  megains / sec"
 	    << KNRM  << "\n";
     
-  double br_r = static_cast<double>(globals::correct_br_pred) / globals::num_br;
-  std::cerr << KGRN << (100.0*br_r) << "\% branches predicted correctly"
-	    << KNRM << "\n";
+  std::cerr << KGRN << *(globals::bpred) << KNRM << "\n";
   
   munmap(mempt, 1UL<<32);
   if(globals::sysArgv) {
