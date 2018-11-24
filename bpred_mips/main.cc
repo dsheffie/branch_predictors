@@ -81,7 +81,7 @@ int main(int argc, char *argv[]) {
   std::string sysArgs, filename;
   uint64_t maxinsns = ~(0UL);
   bool hash = false;
-  uint32_t lg_pht_sz;
+  uint32_t lg_pht_sz, lg_c_pht_sz;
   try {
     po::options_description desc("Options");
     desc.add_options() 
@@ -92,6 +92,7 @@ int main(int argc, char *argv[]) {
       ("file,f", po::value<std::string>(&filename), "mips binary")
       ("maxinsns,m", po::value<uint64_t>(&maxinsns), "max instructions to execute")
       ("lg_pht_sz", po::value<uint32_t>(&lg_pht_sz)->default_value(16), "lg2(pht) sz")
+      ("lg_c_pht_sz", po::value<uint32_t>(&lg_c_pht_sz)->default_value(16), "lg2(choice pht) sz (bimodal predictor)")
       ; 
     po::variables_map vm;
     po::store(po::parse_command_line(argc, argv, desc), vm);
@@ -107,7 +108,8 @@ int main(int argc, char *argv[]) {
     return -1;
   }
   globals::bhr = new sim_bitvec(64);
-  globals::bpred = new gshare(lg_pht_sz);
+  //globals::bpred = new gshare(lg_pht_sz);
+  globals::bpred = new bimodal(lg_c_pht_sz,lg_pht_sz);
   
   /* Build argc and argv */
   globals::sysArgc = buildArgcArgv(filename.c_str(),sysArgs,globals::sysArgv);
