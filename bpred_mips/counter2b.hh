@@ -3,7 +3,7 @@
 
 #include <cstdint>
 #include <cassert>
-#include <boost/dynamic_bitset.hpp>
+#include "sim_bitvec.hh"
 
 class twobit_counter_array {
 private:
@@ -15,7 +15,7 @@ private:
   };
   uint64_t n_entries, n_elems;
   entry *arr = nullptr;
-  boost::dynamic_bitset<> valid;
+  sim_bitvec valid;
 public:
   twobit_counter_array(uint64_t n_entries) :
     n_entries(n_entries) {
@@ -25,7 +25,7 @@ public:
       /* initialize as weakly not-taken */
       arr[i].x = arr[i].y = arr[i].z = arr[i].w = 1;
     }
-    valid.resize(n_entries);
+    valid.clear_and_resize(n_entries);
   }
   ~twobit_counter_array() {
     delete [] arr;
@@ -52,7 +52,7 @@ public:
   }
   void update(uint64_t idx, bool incr) {
     assert(idx < n_entries);
-    valid[idx] = 1;
+    valid.set_bit(idx);
     uint8_t v = get_value(idx);
     if(incr) {
       v = (v > 2) ? v : (v+1);
@@ -80,7 +80,7 @@ public:
     return n_entries;
   }
   uint64_t count_valid() const {
-    return valid.count();
+    return valid.popcount();
   }
 };
 
