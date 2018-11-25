@@ -80,8 +80,10 @@ int main(int argc, char *argv[]) {
   uint64_t maxinsns = ~(0UL);
   bool hash = false;
   uint32_t lg_pht_sz, lg_c_pht_sz;
+  po::options_description desc("Options");
+  po::variables_map vm;
+
   try {
-    po::options_description desc("Options");
     desc.add_options() 
       ("help", "Print help messages") 
       ("args,a", po::value<std::string>(&sysArgs), "arguments to mips binary") 
@@ -92,7 +94,6 @@ int main(int argc, char *argv[]) {
       ("lg_pht_sz", po::value<uint32_t>(&lg_pht_sz)->default_value(16), "lg2(pht) sz")
       ("lg_c_pht_sz", po::value<uint32_t>(&lg_c_pht_sz)->default_value(16), "lg2(choice pht) sz (bimodal predictor)")
       ; 
-    po::variables_map vm;
     po::store(po::parse_command_line(argc, argv, desc), vm);
     po::notify(vm); 
   }
@@ -101,6 +102,12 @@ int main(int argc, char *argv[]) {
     return -1;
   }
 
+  if(vm.count("help")) {
+    std::cout << desc << "\n";
+    return 0;
+  }
+
+  
   if(filename.size()==0) {
     std::cerr << "INTERP : no file\n";
     return -1;
