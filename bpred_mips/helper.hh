@@ -63,7 +63,7 @@ T setBit(T x, T v, uint32_t b) {
 
 #define INTEGRAL_ENABLE_IF(SZ,T) typename std::enable_if<std::is_integral<T>::value and (sizeof(T)==SZ),T>::type* = nullptr
 
-template <typename T, INTEGRAL_ENABLE_IF(1,T)>
+template <bool EL, typename T, INTEGRAL_ENABLE_IF(1,T)>
 T bswap(T x) {
   return x;
 }

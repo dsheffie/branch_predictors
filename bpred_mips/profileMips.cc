@@ -89,8 +89,6 @@ static void setConditionCode(state_t *s, uint32_t v, uint32_t cc);
 
 
 /* IType instructions */
-static void _lb(uint32_t inst, state_t *s);
-static void _lbu(uint32_t inst, state_t *s);
 static void _sb(uint32_t inst, state_t *s);
 
 
@@ -436,6 +434,11 @@ void _bgez_bltz(uint32_t inst, state_t *s) {
     }
 }
 
+template <typename T, bool EL>
+T load(uint32_t ea, state_t *s) {
+  return bswap<EL>(*reinterpret_cast<T*>(s->mem+ea));
+}
+
 
 template <bool EL>
 void _lw(uint32_t inst, state_t *s) {
@@ -443,9 +446,7 @@ void _lw(uint32_t inst, state_t *s) {
   uint32_t rs = (inst >> 21) & 31;
   int16_t himm = (int16_t)(inst & ((1<<16) - 1));
   int32_t imm = (int32_t)himm;
-  uint32_t ea = (uint32_t)s->gpr[rs] + imm;
-
-  s->gpr[rt] = bswap<EL>(*((int32_t*)(s->mem + ea))); 
+  s->gpr[rt] = load<int32_t,EL>(s->gpr[rs] + imm,s);
   s->pc += 4;
 }
 
@@ -455,27 +456,23 @@ void _lh(uint32_t inst, state_t *s) {
   uint32_t rs = (inst >> 21) & 31;
   int16_t himm = (int16_t)(inst & ((1<<16) - 1));
   int32_t imm = (int32_t)himm;
-  
-  uint32_t ea = s->gpr[rs] + imm;
-  int16_t mem = bswap<EL>(*((int16_t*)(s->mem + ea)));
-  s->gpr[rt] = (int32_t)mem;
+  s->gpr[rt] = static_cast<int32_t>(load<int16_t,EL>(s->gpr[rs] + imm,s));
   s->pc +=4;
 }
 
 
-static void _lb(uint32_t inst, state_t *s){
+template <bool EL>
+void _lb(uint32_t inst, state_t *s){
   uint32_t rt = (inst >> 16) & 31;
   uint32_t rs = (inst >> 21) & 31;
   int16_t himm = (int16_t)(inst & ((1<<16) - 1));
   int32_t imm = (int32_t)himm;
-  
-  uint32_t ea = s->gpr[rs] + imm;
-  int8_t v = *((int8_t*)(s->mem + ea));
-  s->gpr[rt] = (int32_t)v;
+  s->gpr[rt] = static_cast<int32_t>(load<int8_t,EL>(s->gpr[rs] + imm,s));
   s->pc += 4;
 }
 
-static void _lbu(uint32_t inst, state_t *s) {
+template <bool EL>
+void _lbu(uint32_t inst, state_t *s) {
   uint32_t rt = (inst >> 16) & 31;
   uint32_t rs = (inst >> 21) & 31;
   int16_t himm = (int16_t)(inst & ((1<<16) - 1));
@@ -1639,7 +1636,7 @@ void execMips(state_t *s) {
 	branch<EL,branch_type::bgtzl>(inst, s); 
 	break;
       case 0x20:
-	_lb(inst, s);
+	_lb<EL>(inst, s);
 	break;
       case 0x21:
 	_lh<EL>(inst, s);
@@ -1651,7 +1648,7 @@ void execMips(state_t *s) {
 	_lw<EL>(inst, s); 
 	break;
       case 0x24:
-	_lbu(inst, s);
+	_lbu<EL>(inst, s);
 	break;
       case 0x25:
 	_lhu<EL>(inst, s);
