@@ -1,5 +1,7 @@
+#define KEEP_BPRED_IMPL_IMPL
 #include "branch_predictor.hh"
 #include "globals.hh"
+
 
 branch_predictor::branch_predictor():
   n_branches(0), n_mispredicts(0) {}
@@ -88,3 +90,18 @@ std::ostream &operator<<(std::ostream &out, const branch_predictor& bp) {
   out << (100.0*br_r) << "\% of branches predicted correctly";
   return out;
 }
+
+
+branch_predictor::bpred_impl branch_predictor::lookup_impl(const std::string& impl_name) {
+  auto it = bpred_impl_map.find(impl_name);
+  if(it == bpred_impl_map.end()) {
+    return branch_predictor::bpred_impl::unknown;
+  }
+  return it->second;
+}
+
+#define PAIR(X) {#X, branch_predictor::bpred_impl::X},
+const std::map<std::string, branch_predictor::bpred_impl> branch_predictor::bpred_impl_map = {
+  BPRED_IMPL_LIST(PAIR)
+};
+#undef PAIR
