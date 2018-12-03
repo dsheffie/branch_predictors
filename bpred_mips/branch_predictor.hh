@@ -3,11 +3,24 @@
 
 #include <cstdint>
 #include <ostream>
+#include <map>
 #include "counter2b.hh"
 
 class sim_state;
 
+#define BPRED_IMPL_LIST(BA) \
+  BA(unknown)		    \
+  BA(gshare)		    \
+  BA(bimodal)		    \
+
 class branch_predictor {
+public:
+#define ITEM(X) X,
+  enum class bpred_impl {
+    BPRED_IMPL_LIST(ITEM)
+  };
+#undef ITEM
+  static const std::map<std::string, bpred_impl> bpred_impl_map;
 protected:
   uint64_t n_branches;
   uint64_t n_mispredicts;
@@ -17,6 +30,7 @@ public:
   virtual void get_stats(uint64_t &n_br, uint64_t &n_mis) const;
   virtual bool predict(uint32_t, uint64_t &) const = 0;
   virtual void update(uint32_t, uint64_t, bool, bool) = 0;
+  static bpred_impl lookup_impl(const std::string& impl_name);
 };
 
 class gshare : public branch_predictor {
@@ -46,5 +60,9 @@ public:
 };
 
 std::ostream &operator<<(std::ostream &, const branch_predictor&);
+
+#ifndef KEEP_BPRED_IMPL_IMPL
+#undef BPRED_IMPL_IMPL
+#endif
 
 #endif

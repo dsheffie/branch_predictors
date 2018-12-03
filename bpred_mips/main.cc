@@ -76,7 +76,7 @@ int main(int argc, char *argv[]) {
 	    << KNRM << "\n";
   
   size_t pgSize = getpagesize();
-  std::string sysArgs, filename;
+  std::string sysArgs, filename, bpred_impl;
   uint64_t maxinsns = ~(0UL);
   bool hash = false;
   uint32_t lg_pht_sz, lg_c_pht_sz;
@@ -93,6 +93,7 @@ int main(int argc, char *argv[]) {
       ("maxinsns,m", po::value<uint64_t>(&maxinsns), "max instructions to execute")
       ("lg_pht_sz", po::value<uint32_t>(&lg_pht_sz)->default_value(16), "lg2(pht) sz")
       ("lg_c_pht_sz", po::value<uint32_t>(&lg_c_pht_sz)->default_value(16), "lg2(choice pht) sz (bimodal predictor)")
+      ("bpred_impl", po::value<std::string>(&bpred_impl), "branch predictor (string)")
       ; 
     po::store(po::parse_command_line(argc, argv, desc), vm);
     po::notify(vm); 
@@ -113,8 +114,18 @@ int main(int argc, char *argv[]) {
     return -1;
   }
   globals::bhr = new sim_bitvec(64);
-  //globals::bpred = new gshare(lg_pht_sz);
-  globals::bpred = new bimodal(lg_c_pht_sz,lg_pht_sz);
+
+  switch(branch_predictor::lookup_impl(bpred_impl))
+    {
+    case branch_predictor::bpred_impl::bimodal:
+      globals::bpred = new bimodal(lg_c_pht_sz,lg_pht_sz);
+      break;
+    case branch_predictor::bpred_impl::gshare:
+    default:
+      globals::bpred = new gshare(lg_pht_sz);
+      break;
+    }
+  
   
   /* Build argc and argv */
   globals::sysArgc = buildArgcArgv(filename.c_str(),sysArgs,globals::sysArgv);
