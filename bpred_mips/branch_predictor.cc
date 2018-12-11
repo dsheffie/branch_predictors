@@ -35,6 +35,35 @@ void gshare::update(uint32_t addr, uint64_t idx, bool prediction, bool taken) {
   n_mispredicts += (prediction != taken);
 }
 
+gtagged::gtagged() : branch_predictor() {}
+gtagged::~gtagged() {}
+
+bool gtagged::predict(uint32_t addr, uint64_t &idx) const {
+  uint64_t hbits = static_cast<uint64_t>(globals::bhr->to_integer());
+  hbits &= ((1UL<<32)-1);
+  hbits <<= 32;
+  idx = (addr>>2) | hbits;
+  const auto it = pht.find(idx);
+  if(it == pht.cend()) {
+    return false;
+  }
+  return (it->second > 1);
+}
+
+void gtagged::update(uint32_t addr, uint64_t idx, bool prediction, bool taken) {
+  uint8_t &e = pht[idx];  
+  if(taken) {
+    e = (e==3) ? 3 : (e + 1);
+  }
+  else {
+    e = (e==0) ? 0 : e-1;
+  }
+  n_branches++;
+  n_mispredicts += (prediction != taken);
+}
+
+
+
 bimodal::bimodal(uint32_t lg_c_pht_entries, uint32_t lg_pht_entries) :
   branch_predictor(), lg_c_pht_entries(lg_c_pht_entries), lg_pht_entries(lg_pht_entries) {
   c_pht = new twobit_counter_array(1U<<lg_c_pht_entries);

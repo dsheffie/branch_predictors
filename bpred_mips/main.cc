@@ -120,6 +120,9 @@ int main(int argc, char *argv[]) {
     case branch_predictor::bpred_impl::bimodal:
       globals::bpred = new bimodal(lg_c_pht_sz,lg_pht_sz);
       break;
+    case branch_predictor::bpred_impl::gtagged:
+      globals::bpred = new gtagged();
+      break;
     case branch_predictor::bpred_impl::gshare:
     default:
       globals::bpred = new gshare(lg_pht_sz);

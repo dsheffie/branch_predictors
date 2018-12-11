@@ -12,6 +12,7 @@ class sim_state;
   BA(unknown)		    \
   BA(gshare)		    \
   BA(bimodal)		    \
+  BA(gtagged)
 
 class branch_predictor {
 public:
@@ -40,6 +41,16 @@ protected:
 public:
   gshare(uint32_t);
   ~gshare();
+  bool predict(uint32_t, uint64_t &) const override;
+  void update(uint32_t addr, uint64_t idx, bool prediction, bool taken) override;
+};
+
+class gtagged : public branch_predictor {
+protected:
+  std::map<uint64_t, uint8_t> pht;
+public:
+  gtagged();
+  ~gtagged();
   bool predict(uint32_t, uint64_t &) const override;
   void update(uint32_t addr, uint64_t idx, bool prediction, bool taken) override;
 };
