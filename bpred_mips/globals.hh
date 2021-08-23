@@ -12,6 +12,11 @@ namespace globals {
   extern bool isMipsEL;
   extern sim_bitvec* bhr;
   extern branch_predictor *bpred;
+  extern uint32_t rsb_sz;
+  extern uint32_t rsb_tos;
+  extern uint32_t *rsb;
+  extern uint64_t num_jr_r31;
+  extern uint64_t num_jr_r31_mispred;
 };
 
 #endif

@@ -29,6 +29,11 @@ char **globals::sysArgv = nullptr;
 int globals::sysArgc = 0;
 bool globals::enClockFuncts = false;
 bool globals::isMipsEL = false;
+uint32_t globals::rsb_sz = 0;
+uint32_t globals::rsb_tos = 0;
+uint32_t * globals::rsb = nullptr;
+uint64_t globals::num_jr_r31 = 0;
+uint64_t globals::num_jr_r31_mispred = 0;
 sim_bitvec* globals::bhr = nullptr;
 branch_predictor* globals::bpred = nullptr;
 
@@ -79,7 +84,7 @@ int main(int argc, char *argv[]) {
   std::string sysArgs, filename, bpred_impl;
   uint64_t maxinsns = ~(0UL);
   bool hash = false;
-  uint32_t lg_pht_sz, lg_c_pht_sz;
+  uint32_t lg_pht_sz, lg_c_pht_sz, lg_rsb_sz;
   po::options_description desc("Options");
   po::variables_map vm;
 
@@ -92,6 +97,7 @@ int main(int argc, char *argv[]) {
       ("file,f", po::value<std::string>(&filename), "mips binary")
       ("maxinsns,m", po::value<uint64_t>(&maxinsns), "max instructions to execute")
       ("lg_pht_sz", po::value<uint32_t>(&lg_pht_sz)->default_value(20), "lg2(pht) sz")
+      ("lg_rsb_sz", po::value<uint32_t>(&lg_rsb_sz)->default_value(2), "lg2(rsb) sz")
       ("lg_c_pht_sz", po::value<uint32_t>(&lg_c_pht_sz)->default_value(16), "lg2(choice pht) sz (bimodal predictor)")
       ("bpred_impl", po::value<std::string>(&bpred_impl), "branch predictor (string)")
       ; 
@@ -108,6 +114,11 @@ int main(int argc, char *argv[]) {
     return 0;
   }
 
+  globals::rsb_sz = 1U << lg_rsb_sz;
+  globals::rsb = new uint32_t[globals::rsb_sz];
+  globals::rsb_tos = (globals::rsb_sz - 1) & (globals::rsb_sz - 1);
+  
+  memset(globals::rsb, 0, sizeof(uint32_t)*globals::rsb_sz);
   
   if(filename.size()==0) {
     std::cerr << "INTERP : no file\n";
@@ -186,6 +197,10 @@ int main(int argc, char *argv[]) {
 	    << KNRM  << "\n";
     
   std::cerr << KGRN << *(globals::bpred) << KNRM << "\n";
+
+  std::cerr << "num jr r31 = " << globals::num_jr_r31 << "\n";
+  std::cerr << "num mispredicted jr r31 = " << globals::num_jr_r31_mispred
+	    << "\n";
   
   munmap(mempt, 1UL<<32);
   if(globals::sysArgv) {
@@ -197,6 +212,7 @@ int main(int argc, char *argv[]) {
   free(s);
   delete globals::bhr;
   delete globals::bpred;
+  delete [] globals::rsb;
   return 0;
 }
 

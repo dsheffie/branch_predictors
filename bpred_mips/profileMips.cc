@@ -1370,6 +1370,13 @@ void execMips(state_t *s) {
       case 0x08: { /* jr */
 	uint32_t jaddr = s->gpr[rs];
 	s->pc += 4;
+	if(rs == 31) {
+	  globals::rsb_tos = (globals::rsb_tos + 1) & (globals::rsb_sz - 1);
+	  if(jaddr != globals::rsb[globals::rsb_tos]) {
+	    ++globals::num_jr_r31_mispred;
+	  }
+	  ++globals::num_jr_r31;
+	}
 	globals::bhr->shift_left(1);
 	globals::bhr->set_bit(0);
 	execMips<EL>(s);
@@ -1380,6 +1387,8 @@ void execMips(state_t *s) {
       case 0x09: { /* jalr */
 	uint32_t jaddr = s->gpr[rs];
 	s->gpr[31] = s->pc+8;
+	globals::rsb[globals::rsb_tos] = s->gpr[31];
+	globals::rsb_tos = (globals::rsb_tos - 1) & (globals::rsb_sz - 1);	
 	s->pc += 4;
 	globals::bhr->shift_left(1);
 	globals::bhr->set_bit(0);	
@@ -1538,6 +1547,8 @@ void execMips(state_t *s) {
     }
     else if(opcode==0x3) { /* jal */
       s->gpr[31] = s->pc+8;
+      globals::rsb[globals::rsb_tos] = s->gpr[31];
+      globals::rsb_tos = (globals::rsb_tos - 1) & (globals::rsb_sz - 1);
       s->pc += 4;
     }
     else {
