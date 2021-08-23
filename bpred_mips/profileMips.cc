@@ -477,9 +477,9 @@ void _lbu(uint32_t inst, state_t *s) {
   uint32_t rs = (inst >> 21) & 31;
   int16_t himm = (int16_t)(inst & ((1<<16) - 1));
   int32_t imm = (int32_t)himm;
-  
+
   uint32_t ea = s->gpr[rs] + imm;
-  uint32_t zExt = (uint32_t)s->mem[ea];
+  uint32_t zExt = (uint32_t)load<int8_t,EL>(s->gpr[rs] + imm,s);
   *((uint32_t*)&(s->gpr[rt])) = zExt;
   s->pc += 4;
 }
@@ -492,7 +492,7 @@ void _lhu(uint32_t inst, state_t *s) {
   int32_t imm = (int32_t)himm;
   
   uint32_t ea = s->gpr[rs] + imm;
-  uint32_t zExt = bswap<EL>(*((uint16_t*)(s->mem + ea)));
+  uint32_t zExt = (uint32_t)load<int16_t,EL>(s->gpr[rs] + imm,s);
   *((uint32_t*)&(s->gpr[rt])) = zExt;
   s->pc += 4;
 }

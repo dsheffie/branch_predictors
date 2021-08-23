@@ -3,18 +3,21 @@
 #include "globals.hh"
 
 
-branch_predictor::branch_predictor():
-  n_branches(0), n_mispredicts(0) {}
+branch_predictor::branch_predictor(uint64_t &icnt):
+  icnt(icnt), n_branches(0), n_mispredicts(0) {}
 
-void branch_predictor::get_stats(uint64_t &n_br, uint64_t &n_mis) const {
+void branch_predictor::get_stats(uint64_t &n_br,
+				 uint64_t &n_mis,
+				 uint64_t &n_insns) const {
   n_br = n_branches;
   n_mis = n_mispredicts;
+  n_insns = icnt;
 }
 
 branch_predictor::~branch_predictor() {}
 
-gshare::gshare(uint32_t lg_pht_entries) :
-  branch_predictor(),
+gshare::gshare(uint64_t &icnt, uint32_t lg_pht_entries) :
+  branch_predictor(icnt),
   lg_pht_entries(lg_pht_entries) {
   pht = new twobit_counter_array(1U<<lg_pht_entries);
 }
@@ -35,7 +38,8 @@ void gshare::update(uint32_t addr, uint64_t idx, bool prediction, bool taken) {
   n_mispredicts += (prediction != taken);
 }
 
-gtagged::gtagged() : branch_predictor() {}
+gtagged::gtagged(uint64_t &icnt) :
+  branch_predictor(icnt) {}
 gtagged::~gtagged() {}
 
 bool gtagged::predict(uint32_t addr, uint64_t &idx) const {
@@ -64,8 +68,8 @@ void gtagged::update(uint32_t addr, uint64_t idx, bool prediction, bool taken) {
 
 
 
-bimodal::bimodal(uint32_t lg_c_pht_entries, uint32_t lg_pht_entries) :
-  branch_predictor(), lg_c_pht_entries(lg_c_pht_entries), lg_pht_entries(lg_pht_entries) {
+bimodal::bimodal(uint64_t &icnt, uint32_t lg_c_pht_entries, uint32_t lg_pht_entries) :
+  branch_predictor(icnt), lg_c_pht_entries(lg_c_pht_entries), lg_pht_entries(lg_pht_entries) {
   c_pht = new twobit_counter_array(1U<<lg_c_pht_entries);
   nt_pht = new twobit_counter_array(1U<<lg_pht_entries);
   t_pht = new twobit_counter_array(1U<<lg_pht_entries);
@@ -113,10 +117,12 @@ void bimodal::update(uint32_t addr, uint64_t idx, bool prediction, bool taken) {
 
 
 std::ostream &operator<<(std::ostream &out, const branch_predictor& bp) {
-  uint64_t n_br=0,n_mis=0;
-  bp.get_stats(n_br,n_mis);
+  uint64_t n_br=0,n_mis=0, icnt = 0;
+  bp.get_stats(n_br,n_mis,icnt);
   double br_r = static_cast<double>(n_br-n_mis) / n_br;
-  out << (100.0*br_r) << "\% of branches predicted correctly";
+  out << (100.0*br_r) << "\% of branches predicted correctly\n";
+  out << 1000.0 * (static_cast<double>(n_mis) / icnt)
+      << " mispredicts per kilo insn\n";
   return out;
 }
 

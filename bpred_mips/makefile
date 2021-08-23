@@ -8,7 +8,7 @@ ifeq ($(UNAME_M), x86_64)
 endif
 
 ifeq ($(UNAME_S),Linux)
-	CXX = clang++-4.0 $(HOST)
+	CXX = g++ $(HOST)
 	EXTRA_LD = -ldl -lffi -lbfd -lunwind -lboost_system -lboost_program_options
 endif
 

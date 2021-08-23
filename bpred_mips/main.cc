@@ -114,21 +114,6 @@ int main(int argc, char *argv[]) {
     return -1;
   }
   globals::bhr = new sim_bitvec(64);
-
-  switch(branch_predictor::lookup_impl(bpred_impl))
-    {
-    case branch_predictor::bpred_impl::bimodal:
-      globals::bpred = new bimodal(lg_c_pht_sz,lg_pht_sz);
-      break;
-    case branch_predictor::bpred_impl::gtagged:
-      globals::bpred = new gtagged();
-      break;
-    case branch_predictor::bpred_impl::gshare:
-    default:
-      globals::bpred = new gshare(lg_pht_sz);
-      break;
-    }
-  
   
   /* Build argc and argv */
   globals::sysArgc = buildArgcArgv(filename.c_str(),sysArgs,globals::sysArgv);
@@ -137,6 +122,25 @@ int main(int argc, char *argv[]) {
   int rc = posix_memalign((void**)&s, pgSize, pgSize); 
   initState(s);
   s->maxicnt = maxinsns;
+
+
+
+  switch(branch_predictor::lookup_impl(bpred_impl))
+    {
+    case branch_predictor::bpred_impl::bimodal:
+      globals::bpred = new bimodal(s->icnt,lg_c_pht_sz,lg_pht_sz);
+      break;
+    case branch_predictor::bpred_impl::gtagged:
+      globals::bpred = new gtagged(s->icnt);
+      break;
+    case branch_predictor::bpred_impl::gshare:
+    default:
+      globals::bpred = new gshare(s->icnt,lg_pht_sz);
+      break;
+    }
+  
+
+  
 #ifdef __linux__
   void* mempt = mmap(nullptr, 1UL<<32, PROT_READ | PROT_WRITE,
 		     MAP_PRIVATE | MAP_ANONYMOUS | MAP_NORESERVE, -1, 0);
