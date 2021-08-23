@@ -91,7 +91,7 @@ int main(int argc, char *argv[]) {
       ("hash,h", po::value<bool>(&hash), "hash memory at end of execution")
       ("file,f", po::value<std::string>(&filename), "mips binary")
       ("maxinsns,m", po::value<uint64_t>(&maxinsns), "max instructions to execute")
-      ("lg_pht_sz", po::value<uint32_t>(&lg_pht_sz)->default_value(16), "lg2(pht) sz")
+      ("lg_pht_sz", po::value<uint32_t>(&lg_pht_sz)->default_value(20), "lg2(pht) sz")
       ("lg_c_pht_sz", po::value<uint32_t>(&lg_c_pht_sz)->default_value(16), "lg2(choice pht) sz (bimodal predictor)")
       ("bpred_impl", po::value<std::string>(&bpred_impl), "branch predictor (string)")
       ; 

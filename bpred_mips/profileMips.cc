@@ -1370,14 +1370,19 @@ void execMips(state_t *s) {
       case 0x08: { /* jr */
 	uint32_t jaddr = s->gpr[rs];
 	s->pc += 4;
+	globals::bhr->shift_left(1);
+	globals::bhr->set_bit(0);
 	execMips<EL>(s);
 	s->pc = jaddr;
+
 	break;
       }
       case 0x09: { /* jalr */
 	uint32_t jaddr = s->gpr[rs];
 	s->gpr[31] = s->pc+8;
 	s->pc += 4;
+	globals::bhr->shift_left(1);
+	globals::bhr->set_bit(0);	
 	execMips<EL>(s);
 	s->pc = jaddr;
 	break;
@@ -1540,6 +1545,8 @@ void execMips(state_t *s) {
       exit(-1);
     }
     jaddr |= (s->pc & (~((1<<28)-1)));
+    globals::bhr->shift_left(1);
+    globals::bhr->set_bit(0);    
     execMips<EL>(s);
     s->pc = jaddr;
   }
