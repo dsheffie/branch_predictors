@@ -4,6 +4,8 @@
 #include <cstdlib>
 #include <cstring>
 #include <iostream>
+#include <cstring>
+#include <boost/functional/hash.hpp>
 #include "helper.hh"
 
 template <typename E>
@@ -31,6 +33,26 @@ public:
   void clear() {
     memset(arr, 0, sizeof(E)*n_words);
   }
+  //methods needed to hash
+  bool operator==(const sim_bitvec_template& other) const {
+    if(n_bits != other.n_bits)
+      return false;
+    int rc =  memcmp(reinterpret_cast<void*>(arr),
+		     reinterpret_cast<void*>(other.arr),
+		     sizeof(E)*n_words);
+    return (rc == 0);
+  }
+  std::size_t hash() const noexcept {
+    std::size_t seed = 0;
+    for(size_t w = 0; w < n_words; ++w) {
+      boost::hash_combine(seed, arr[w]);
+    }
+    return seed;
+  }
+  std::size_t operator()() const noexcept {
+    return hash();
+  }
+  //other stuff
   size_t ln2_size() const {
     return static_cast<size_t>(ln2_bits);
   }

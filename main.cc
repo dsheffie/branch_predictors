@@ -167,6 +167,9 @@ int main(int argc, char *argv[]) {
     case branch_predictor::bpred_impl::gtagged:
       globals::bpred = new gtagged(s->icnt);
       break;
+    case branch_predictor::bpred_impl::uberhistory:
+      globals::bpred = new uberhistory(s->icnt);
+      break;
     case branch_predictor::bpred_impl::gshare:
     default:
       globals::bpred = new gshare(s->icnt,lg_pht_sz);

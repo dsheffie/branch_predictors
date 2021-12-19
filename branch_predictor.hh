@@ -4,15 +4,16 @@
 #include <cstdint>
 #include <ostream>
 #include <map>
+#include <unordered_map>
 #include "counter2b.hh"
-
-class sim_state;
+#include "sim_bitvec.hh"
 
 #define BPRED_IMPL_LIST(BA) \
   BA(unknown)		    \
   BA(gshare)		    \
   BA(bimodal)		    \
-  BA(gtagged)
+  BA(gtagged)		    \
+  BA(uberhistory)
 
 class branch_predictor {
 public:
@@ -77,6 +78,24 @@ public:
   bool predict(uint32_t, uint64_t &) const override;
   void update(uint32_t addr, uint64_t idx, bool prediction, bool taken) override;
 };
+
+class uberhistory : public branch_predictor {
+protected:
+  struct entry {
+    uint32_t pc;
+    uint8_t p;
+    bool v;
+  };
+  static const size_t lg_history_entries = 28;
+  entry *history_table;
+public:
+  uberhistory(uint64_t &);
+  ~uberhistory();
+  bool predict(uint32_t, uint64_t &) const override;
+  void update(uint32_t addr, uint64_t idx, bool prediction, bool taken) override;
+};
+
+
 
 std::ostream &operator<<(std::ostream &, const branch_predictor&);
 

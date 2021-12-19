@@ -16,6 +16,38 @@ void branch_predictor::get_stats(uint64_t &n_br,
 
 branch_predictor::~branch_predictor() {}
 
+uberhistory::uberhistory(uint64_t &icnt) :
+  branch_predictor(icnt){
+  history_table = new entry[1UL<<lg_history_entries];
+  memset(history_table, 0, sizeof(entry)*(1UL<<lg_history_entries));
+}
+
+uberhistory::~uberhistory() {
+  delete [] history_table;
+}
+
+bool uberhistory::predict(uint32_t addr, uint64_t &idx) const {
+  sim_bitvec &h = *globals::bhr;
+  idx = h() % (1UL<<lg_history_entries);
+  entry &e = history_table[idx];
+  return e.p > 1;
+}
+
+void uberhistory::update(uint32_t addr, uint64_t idx, bool prediction, bool taken) {
+  //pht->update(idx, taken);
+  static const uint8_t next_t[4] = {1, 2, 3, 3};
+  static const uint8_t next_nt[4] = {0, 0, 1, 2};
+  entry &e = history_table[idx];
+  e.pc = addr;
+  e.v = true;
+  e.p = taken ? next_t[e.p & 3] : next_nt[e.p & 3];
+  n_branches++;
+  if(prediction != taken) {
+    n_mispredicts++;
+    mispredict_map[addr]++;
+  }
+}
+
 gshare::gshare(uint64_t &icnt, uint32_t lg_pht_entries) :
   branch_predictor(icnt),
   lg_pht_entries(lg_pht_entries) {
