@@ -27,7 +27,9 @@ gshare::~gshare() {
 }
 
 bool gshare::predict(uint32_t addr, uint64_t &idx) const {
-  idx = (addr>>2) ^ globals::bhr->to_integer();
+  addr = addr >> 2; //shift of bottom 2 bits
+  addr = addr << 12;
+  idx =  addr ^ globals::bhr->to_integer();
   idx &= (1UL << lg_pht_entries) - 1;
   return pht->get_value(idx) > 1;
 }
@@ -35,7 +37,10 @@ bool gshare::predict(uint32_t addr, uint64_t &idx) const {
 void gshare::update(uint32_t addr, uint64_t idx, bool prediction, bool taken) {
   pht->update(idx, taken);
   n_branches++;
-  n_mispredicts += (prediction != taken);
+  if(prediction != taken) {
+    n_mispredicts++;
+    mispredict_map[addr]++;
+  }
 }
 
 gtagged::gtagged(uint64_t &icnt) :

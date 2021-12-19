@@ -1374,6 +1374,7 @@ void execMips(state_t *s) {
 	  globals::rsb_tos = (globals::rsb_tos + 1) & (globals::rsb_sz - 1);
 	  if(jaddr != globals::rsb[globals::rsb_tos]) {
 	    ++globals::num_jr_r31_mispred;
+	    globals::bpred->getMap()[s->pc-4]++;
 	  }
 	  ++globals::num_jr_r31;
 	}

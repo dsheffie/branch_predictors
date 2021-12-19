@@ -26,6 +26,7 @@ protected:
   uint64_t &icnt;
   uint64_t n_branches;
   uint64_t n_mispredicts;
+  std::map<uint32_t, uint64_t> mispredict_map;
 public:
   branch_predictor(uint64_t &icnt);
   virtual ~branch_predictor();
@@ -33,6 +34,12 @@ public:
   virtual bool predict(uint32_t, uint64_t &) const = 0;
   virtual void update(uint32_t, uint64_t, bool, bool) = 0;
   static bpred_impl lookup_impl(const std::string& impl_name);
+  const std::map<uint32_t, uint64_t> &getMap() const {
+    return mispredict_map;
+  }
+  std::map<uint32_t, uint64_t> &getMap() {
+    return mispredict_map;
+  }
 };
 
 class gshare : public branch_predictor {

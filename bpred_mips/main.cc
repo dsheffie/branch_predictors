@@ -1,5 +1,6 @@
 #include <cstdio>
 #include <iostream>
+#include <fstream>
 #include <sys/stat.h>
 #include <sys/time.h>
 #include <fcntl.h>
@@ -38,6 +39,28 @@ sim_bitvec* globals::bhr = nullptr;
 branch_predictor* globals::bpred = nullptr;
 
 static state_t *s = nullptr;
+
+template<typename X, typename Y>
+static inline void dump_histo(const std::string &fname,
+			      const std::map<X,Y> &histo,
+			      const state_t *s) {
+  std::vector<std::pair<X,Y>> sorted_by_cnt;
+  for(auto &p : histo) {
+    sorted_by_cnt.emplace_back(p.second, p.first);
+  }
+  std::ofstream out(fname);
+  std::sort(sorted_by_cnt.begin(), sorted_by_cnt.end());
+  for(auto it = sorted_by_cnt.rbegin(), E = sorted_by_cnt.rend(); it != E; ++it) {
+    uint32_t r_inst = *reinterpret_cast<uint32_t*>(s->mem + it->second);
+    r_inst = bswap<false>(r_inst);	
+    auto s = getAsmString(r_inst, it->second);
+    out << std::hex << it->second << ":"
+  	      << s << ","
+  	      << std::dec << it->first << "\n";
+  }
+  out.close();
+}
+
 
 static int buildArgcArgv(const char *filename, const std::string &sysArgs, char **&argv){
   int cnt = 0;
@@ -201,6 +224,8 @@ int main(int argc, char *argv[]) {
   std::cerr << "num jr r31 = " << globals::num_jr_r31 << "\n";
   std::cerr << "num mispredicted jr r31 = " << globals::num_jr_r31_mispred
 	    << "\n";
+
+  dump_histo("mispredicts.txt", globals::bpred->getMap(), s);
   
   munmap(mempt, 1UL<<32);
   if(globals::sysArgv) {
