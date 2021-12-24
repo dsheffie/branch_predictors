@@ -81,15 +81,15 @@ public:
 
 class uberhistory : public branch_predictor {
 protected:
+  uint32_t lg_history_entries;
   struct entry {
     uint32_t pc;
     uint8_t p;
     bool v;
   };
-  static const size_t lg_history_entries = 28;
   entry *history_table;
 public:
-  uberhistory(uint64_t &);
+  uberhistory(uint64_t &, uint32_t);
   ~uberhistory();
   bool predict(uint32_t, uint64_t &) const override;
   void update(uint32_t addr, uint64_t idx, bool prediction, bool taken) override;

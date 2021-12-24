@@ -17,6 +17,7 @@
 #include <boost/program_options.hpp>
 
 #include "loadelf.hh"
+#include "saveState.hh"
 #include "helper.hh"
 #include "parseMips.hh"
 #include "profileMips.hh"
@@ -106,7 +107,8 @@ int main(int argc, char *argv[]) {
   size_t pgSize = getpagesize();
   std::string sysArgs, filename, bpred_impl;
   uint64_t maxinsns = ~(0UL);
-  bool hash = false;
+  bool hash = false,loaddump = false;
+  size_t bhr_len;
   uint32_t lg_pht_sz, lg_c_pht_sz, lg_rsb_sz;
   po::options_description desc("Options");
   po::variables_map vm;
@@ -116,10 +118,12 @@ int main(int argc, char *argv[]) {
       ("help", "Print help messages") 
       ("args,a", po::value<std::string>(&sysArgs), "arguments to mips binary") 
       ("clock,c", po::value<bool>(&globals::enClockFuncts), "enable wall-clock")
+      ("dump,d", po::value<bool>(&loaddump)->default_value(false), "load a binary blob")
+      ("file,f", po::value<std::string>(&filename), "mips binary")      
       ("hash,h", po::value<bool>(&hash), "hash memory at end of execution")
-      ("file,f", po::value<std::string>(&filename), "mips binary")
       ("maxinsns,m", po::value<uint64_t>(&maxinsns), "max instructions to execute")
-      ("lg_pht_sz", po::value<uint32_t>(&lg_pht_sz)->default_value(20), "lg2(pht) sz")
+      ("bhr_len", po::value<size_t>(&bhr_len)->default_value(64), "branch history length")
+      ("lg_pht_sz", po::value<uint32_t>(&lg_pht_sz)->default_value(12), "lg2(pht) sz")
       ("lg_rsb_sz", po::value<uint32_t>(&lg_rsb_sz)->default_value(2), "lg2(rsb) sz")
       ("lg_c_pht_sz", po::value<uint32_t>(&lg_c_pht_sz)->default_value(16), "lg2(choice pht) sz (bimodal predictor)")
       ("bpred_impl", po::value<std::string>(&bpred_impl), "branch predictor (string)")
@@ -147,7 +151,8 @@ int main(int argc, char *argv[]) {
     std::cerr << "INTERP : no file\n";
     return -1;
   }
-  globals::bhr = new sim_bitvec(64);
+  
+  globals::bhr = new sim_bitvec(bhr_len);
   
   /* Build argc and argv */
   globals::sysArgc = buildArgcArgv(filename.c_str(),sysArgs,globals::sysArgv);
@@ -168,7 +173,7 @@ int main(int argc, char *argv[]) {
       globals::bpred = new gtagged(s->icnt);
       break;
     case branch_predictor::bpred_impl::uberhistory:
-      globals::bpred = new uberhistory(s->icnt);
+      globals::bpred = new uberhistory(s->icnt,lg_pht_sz);
       break;
     case branch_predictor::bpred_impl::gshare:
     default:
@@ -192,9 +197,14 @@ int main(int argc, char *argv[]) {
     std::cerr << "INTERP : couldn't allocate backing memory!\n";
     exit(-1);
   }
-  
-  load_elf(filename.c_str(), s);
-  mkMonitorVectors(s);
+
+  if(loaddump) {
+    loadState(*s, filename.c_str());
+ }
+ else {
+   load_elf(filename.c_str(), s);
+   mkMonitorVectors(s);
+ }
 
   double runtime = timestamp();
   if(globals::isMipsEL) {

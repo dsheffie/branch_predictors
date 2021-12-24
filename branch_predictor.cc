@@ -16,13 +16,19 @@ void branch_predictor::get_stats(uint64_t &n_br,
 
 branch_predictor::~branch_predictor() {}
 
-uberhistory::uberhistory(uint64_t &icnt) :
-  branch_predictor(icnt){
+uberhistory::uberhistory(uint64_t &icnt, uint32_t lg_history_entries) :
+  branch_predictor(icnt), lg_history_entries(lg_history_entries) {
   history_table = new entry[1UL<<lg_history_entries];
   memset(history_table, 0, sizeof(entry)*(1UL<<lg_history_entries));
 }
 
 uberhistory::~uberhistory() {
+  size_t used = 0, sz = 1UL<<lg_history_entries;
+  for(size_t i = 0 ; i < sz; i++) {
+    used += history_table[i].v;
+  }
+  std::cout << used << " valid entries in history table\n";
+  std::cout << static_cast<double>(used) / sz << " frac used\n";
   delete [] history_table;
 }
 
@@ -38,11 +44,16 @@ void uberhistory::update(uint32_t addr, uint64_t idx, bool prediction, bool take
   static const uint8_t next_t[4] = {1, 2, 3, 3};
   static const uint8_t next_nt[4] = {0, 0, 1, 2};
   entry &e = history_table[idx];
+  bool mispredict = prediction != taken;
   e.pc = addr;
   e.v = true;
   e.p = taken ? next_t[e.p & 3] : next_nt[e.p & 3];
   n_branches++;
-  if(prediction != taken) {
+
+  if(mispredict) {
+    //if(addr == 0x204b0) {
+    //std::cout << (*globals::bhr) << "\n";
+    //}
     n_mispredicts++;
     mispredict_map[addr]++;
   }
@@ -60,8 +71,20 @@ gshare::~gshare() {
 
 bool gshare::predict(uint32_t addr, uint64_t &idx) const {
   addr = addr >> 2; //shift of bottom 2 bits
-  addr = addr << 12;
-  idx =  addr ^ globals::bhr->to_integer();
+  //addr = addr << 12;
+  uint64_t fold_bhr = globals::bhr->to_integer();
+  fold_bhr = (fold_bhr >> 32) ^ (fold_bhr & ((1UL<<32)-1));
+  fold_bhr = (fold_bhr >> 16) ^ (fold_bhr & ((1UL<<16)-1));
+  idx =  addr ^ fold_bhr;
+  //idx =  addr ^ globals::bhr->hash();
+  //if(addr == (0x204b0>>2)) {
+  //std::cout << "naive hash = " << std::hex
+  //<< globals::bhr->to_integer()
+  //	      << " boost hash = "
+  //<<  globals::bhr->hash()
+  //<< std::dec
+  //<< "\n";
+  //}  
   idx &= (1UL << lg_pht_entries) - 1;
   return pht->get_value(idx) > 1;
 }

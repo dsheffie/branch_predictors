@@ -1,7 +1,7 @@
 UNAME_S = $(shell uname -s)
 UNAME_M = $(shell uname -m)
 
-OBJ = main.o loadelf.o parseMips.o helper.o profileMips.o githash.o branch_predictor.o
+OBJ = main.o loadelf.o parseMips.o helper.o profileMips.o githash.o branch_predictor.o saveState.o
 HOST =
 ifeq ($(UNAME_M), x86_64)
 	HOST = -march=native -flto
