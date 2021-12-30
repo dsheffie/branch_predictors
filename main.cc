@@ -111,7 +111,7 @@ int main(int argc, char *argv[]) {
   std::string sysArgs, filename, bpred_impl;
   uint64_t maxinsns = ~(0UL);
   bool hash = false,loaddump = false;
-  uint32_t assoc, l1d_sets;
+  uint32_t assoc, l1d_sets, line_len;
   size_t bhr_len;
   uint32_t lg_pht_sz, lg_c_pht_sz, lg_rsb_sz;
   po::options_description desc("Options");
@@ -133,6 +133,7 @@ int main(int argc, char *argv[]) {
       ("bpred_impl", po::value<std::string>(&bpred_impl), "branch predictor (string)")
       ("assoc", po::value<uint32_t>(&assoc)->default_value(8), "cache associativity")
       ("sets", po::value<uint32_t>(&l1d_sets)->default_value(64), "cache sets")
+      ("line_len", po::value<uint32_t>(&line_len)->default_value(16), "cache line length")
       ; 
     po::store(po::parse_command_line(argc, argv, desc), vm);
     po::notify(vm); 
@@ -206,6 +207,8 @@ int main(int argc, char *argv[]) {
 
   if(loaddump) {
     loadState(*globals::state, filename.c_str());
+    globals::state->icnt = 0;
+    //std::cout << "state loaded with " << globals::state->icnt << " executed insns\n";
  }
  else {
    load_elf(filename.c_str(), globals::state);
@@ -213,13 +216,13 @@ int main(int argc, char *argv[]) {
  }
 
   if(assoc==1) {
-    globals::L1D = new directMappedCache(64, 1, l1d_sets, "l1D", 1, nullptr);
+    globals::L1D = new directMappedCache(line_len, 1, l1d_sets, "l1D", 1, nullptr);
   }
   else if(l1d_sets==1) {
-    globals::L1D = new fullAssocCache(64, assoc, 1, "l1D", 1, nullptr);
+    globals::L1D = new fullAssocCache(line_len, assoc, 1, "l1D", 1, nullptr);
   }
   else {
-    globals::L1D = new setAssocCache(64, assoc, l1d_sets,  "l1D", 1, nullptr);
+    globals::L1D = new setAssocCache(line_len, assoc, l1d_sets,  "l1D", 1, nullptr);
   }
   
   double runtime = timestamp();
