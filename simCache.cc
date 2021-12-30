@@ -5,7 +5,6 @@
 #include "globals.hh"
 
 
-extern bool enableStackDepth;
 
 std::ostream &operator<<(std::ostream &out, const simCache &cache) {
   double total = static_cast<double>(cache.hits+cache.misses);
@@ -25,7 +24,7 @@ std::ostream &operator<<(std::ostream &out, const simCache &cache) {
   out << "write_hits = "<< cache.rw_hits[1] << "\n";
   out << "write_misses = "<< cache.rw_misses[1] << "\n";
 
-  if(enableStackDepth) {
+  if(globals::enableStackDepth) {
     for(size_t i = 0; i < cache.max_stack_size; i++) {
       out << i << "," << cache.stack_hits.at(i) << ","
 	  << (cache.stack_hits.at(i)+cache.stack_misses.at(i))
@@ -66,7 +65,7 @@ simCache::simCache(size_t bytes_per_line, size_t assoc, size_t num_sets,
   ln2_offset_bits = ln2_num_sets + ln2_bytes_per_line;
   ln2_tag_bits = 8*sizeof(uint32_t) - ln2_offset_bits;
 
-  if(enableStackDepth) {
+  if(globals::enableStackDepth) {
     max_stack_size = num_sets*assoc*4;
     stack_hits.resize(max_stack_size);
     stack_misses.resize(max_stack_size);
@@ -252,7 +251,7 @@ void directMappedCache::access(uint32_t addr, uint32_t num_bytes, opType o) {
     hit = false;
   }
 
-  if(enableStackDepth) {
+  if(globals::enableStackDepth) {
     update_distance_stack(addr,hit);
   }
   
@@ -286,7 +285,7 @@ void fullAssocCache::access(uint32_t addr, uint32_t num_bytes, opType o) {
     }
     entries.push_front(t);
   }
-  if(enableStackDepth) {
+  if(globals::enableStackDepth) {
     update_distance_stack(addr, hit);
   }
 }
@@ -313,7 +312,7 @@ void setAssocCache::access(uint32_t addr, uint32_t num_bytes, opType o) {
   uint32_t w,t;
   uint32_t b = index(addr, w, t);
   bool hit = sets[w]->access(t,o);
-  if(enableStackDepth) {
+  if(globals::enableStackDepth) {
     update_distance_stack(addr, hit);
   }
 }

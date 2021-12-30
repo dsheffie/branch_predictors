@@ -5,6 +5,7 @@
 #include "state.hh"
 
 class branch_predictor;
+class simCache;
 
 namespace globals {
   extern bool enClockFuncts;
@@ -19,6 +20,8 @@ namespace globals {
   extern uint64_t num_jr_r31;
   extern uint64_t num_jr_r31_mispred;
   extern state_t *state;
+  extern simCache *L1D;
+  extern bool enableStackDepth;
 };
 
 #endif

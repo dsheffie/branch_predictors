@@ -18,6 +18,7 @@
 #include "globals.hh"
 #include "sim_bitvec.hh"
 #include "branch_predictor.hh"
+#include "simCache.hh"
 
 enum class fpOperation {
   abs,neg,mov,add,
@@ -436,6 +437,7 @@ void _bgez_bltz(uint32_t inst, state_t *s) {
 
 template <typename T, bool EL>
 T load(uint32_t ea, state_t *s) {
+  globals::L1D->read(ea,sizeof(T));
   return bswap<EL>(*reinterpret_cast<T*>(s->mem+ea));
 }
 
@@ -505,6 +507,7 @@ void _sw(uint32_t inst, state_t *s) {
   int16_t himm = (int16_t)(inst & ((1<<16) - 1));
   int32_t imm = (int32_t)himm;
   uint32_t ea = s->gpr[rs] + imm;
+  globals::L1D->write(ea,4);    
   *((int32_t*)(s->mem + ea)) = bswap<EL>(s->gpr[rt]);
   
   s->pc += 4;
@@ -524,8 +527,8 @@ void _sh(uint32_t inst, state_t *s) {
   uint32_t rs = (inst >> 21) & 31;
   int16_t himm = (int16_t)(inst & ((1<<16) - 1));
   int32_t imm = (int32_t)himm;
-    
   uint32_t ea = s->gpr[rs] + imm;
+  globals::L1D->write(ea,2);    
   *((int16_t*)(s->mem + ea)) = bswap<EL>(((int16_t)s->gpr[rt]));
   s->pc += 4;
 }
@@ -535,10 +538,9 @@ static void _sb(uint32_t inst, state_t *s) {
   uint32_t rs = (inst >> 21) & 31;
   int16_t himm = (int16_t)(inst & ((1<<16) - 1));
   int32_t imm = (int32_t)himm;
-    
   uint32_t ea = s->gpr[rs] + imm;
+  globals::L1D->write(ea,1);      
   s->mem[ea] = (uint8_t)s->gpr[rt];
-  
   s->pc +=4;
 }
 
@@ -576,6 +578,7 @@ void _swl(uint32_t inst, state_t *s) {
   uint32_t m = ~((1U << (8*(4 - ma))) - 1);
   xx = (r & m) | xs;
   *((uint32_t*)(s->mem + ea)) = bswap<EL>(xx);
+  globals::L1D->write(ea,4);  
   s->pc += 4;
 }
 
@@ -599,6 +602,7 @@ void _swr(uint32_t inst, state_t *s) {
 
   xx = (x << xs) | (rm & r);
   *((uint32_t*)(s->mem + ea)) = bswap<EL>(xx);
+  globals::L1D->write(ea,4);
   s->pc += 4;
 }
 
@@ -616,6 +620,7 @@ void _lwl(uint32_t inst, state_t *s) {
     ma = 3 - ma;
   int32_t r = bswap<EL>(*((int32_t*)(s->mem + ea))); 
   int32_t x =  s->gpr[rt];
+  globals::L1D->read(ea,4);
   
   switch(ma)
     {
@@ -645,6 +650,8 @@ void _lwr(uint32_t inst, state_t *s) {
   uint32_t ea = ((uint32_t)s->gpr[rs] + imm);
   uint32_t ma = ea & 3;
   ea &= 0xfffffffc;
+  globals::L1D->read(ea,4);
+  
   if(EL)
     ma = 3-ma;
   uint32_t r = bswap<EL>(*((int32_t*)(s->mem + ea))); 
@@ -816,6 +823,7 @@ void _ldc1(uint32_t inst, state_t *s) {
   int16_t himm = (int16_t)(inst & ((1<<16) - 1));
   int32_t imm = (int32_t)himm;
   uint32_t ea = s->gpr[rs] + imm;
+  globals::L1D->read(ea,8);    
   *((int64_t*)(s->cpr1 + ft)) = bswap<EL>(*((int64_t*)(s->mem + ea))); 
   s->pc += 4;
 }
@@ -827,6 +835,7 @@ void _sdc1(uint32_t inst, state_t *s) {
   int16_t himm = (int16_t)(inst & ((1<<16) - 1));
   int32_t imm = (int32_t)himm;
   uint32_t ea = s->gpr[rs] + imm;
+  globals::L1D->write(ea,8);    
   *((int64_t*)(s->mem + ea)) = bswap<EL>((*(int64_t*)(s->cpr1 + ft)));
   s->pc += 4;
 }
@@ -838,7 +847,8 @@ void _lwc1(uint32_t inst, state_t *s) {
   int16_t himm = (int16_t)(inst & ((1<<16) - 1));
   int32_t imm = (int32_t)himm;
   uint32_t ea = s->gpr[rs] + imm;
-  uint32_t v = bswap<EL>(*((uint32_t*)(s->mem + ea))); 
+  uint32_t v = bswap<EL>(*((uint32_t*)(s->mem + ea)));
+  globals::L1D->read(ea,4);  
   *((float*)(s->cpr1 + ft)) = *((float*)&v);
   s->pc += 4;
 }
@@ -850,6 +860,7 @@ void _swc1(uint32_t inst, state_t *s) {
   int16_t himm = (int16_t)(inst & ((1<<16) - 1));
   int32_t imm = (int32_t)himm;
   uint32_t ea = s->gpr[rs] + imm;
+  globals::L1D->write(ea,4);  
   uint32_t v = *((uint32_t*)(s->cpr1+ft));
   *((uint32_t*)(s->mem + ea)) = bswap<EL>(v);
   s->pc += 4;

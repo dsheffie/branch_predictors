@@ -24,6 +24,7 @@
 #include "globals.hh"
 #include "sim_bitvec.hh"
 #include "branch_predictor.hh"
+#include "simCache.hh"
 
 extern const char* githash;
 
@@ -39,8 +40,9 @@ uint64_t globals::num_jr_r31_mispred = 0;
 
 sim_bitvec* globals::bhr = nullptr;
 branch_predictor* globals::bpred = nullptr;
-
 state_t* globals::state = nullptr;
+simCache* globals::L1D = nullptr;
+bool globals::enableStackDepth = false;
 
 template<typename X, typename Y>
 static inline void dump_histo(const std::string &fname,
@@ -109,11 +111,12 @@ int main(int argc, char *argv[]) {
   std::string sysArgs, filename, bpred_impl;
   uint64_t maxinsns = ~(0UL);
   bool hash = false,loaddump = false;
+  uint32_t assoc, l1d_sets;
   size_t bhr_len;
   uint32_t lg_pht_sz, lg_c_pht_sz, lg_rsb_sz;
   po::options_description desc("Options");
   po::variables_map vm;
-
+  
   try {
     desc.add_options() 
       ("help", "Print help messages") 
@@ -128,6 +131,8 @@ int main(int argc, char *argv[]) {
       ("lg_rsb_sz", po::value<uint32_t>(&lg_rsb_sz)->default_value(2), "lg2(rsb) sz")
       ("lg_c_pht_sz", po::value<uint32_t>(&lg_c_pht_sz)->default_value(16), "lg2(choice pht) sz (bimodal predictor)")
       ("bpred_impl", po::value<std::string>(&bpred_impl), "branch predictor (string)")
+      ("assoc", po::value<uint32_t>(&assoc)->default_value(8), "cache associativity")
+      ("sets", po::value<uint32_t>(&l1d_sets)->default_value(64), "cache sets")
       ; 
     po::store(po::parse_command_line(argc, argv, desc), vm);
     po::notify(vm); 
@@ -207,6 +212,16 @@ int main(int argc, char *argv[]) {
    mkMonitorVectors(globals::state);
  }
 
+  if(assoc==1) {
+    globals::L1D = new directMappedCache(64, 1, l1d_sets, "l1D", 1, nullptr);
+  }
+  else if(l1d_sets==1) {
+    globals::L1D = new fullAssocCache(64, assoc, 1, "l1D", 1, nullptr);
+  }
+  else {
+    globals::L1D = new setAssocCache(64, assoc, l1d_sets,  "l1D", 1, nullptr);
+  }
+  
   double runtime = timestamp();
   if(globals::isMipsEL) {
     while(globals::state->brk==0 and (globals::state->icnt < globals::state->maxicnt)) {
@@ -252,6 +267,9 @@ int main(int argc, char *argv[]) {
   delete globals::bhr;
   delete globals::bpred;
   delete [] globals::rsb;
+  std::cerr << *globals::L1D << "\n";
+  delete globals::L1D;
+
   return 0;
 }
 
