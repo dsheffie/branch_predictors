@@ -36,10 +36,11 @@ uint32_t globals::rsb_tos = 0;
 uint32_t * globals::rsb = nullptr;
 uint64_t globals::num_jr_r31 = 0;
 uint64_t globals::num_jr_r31_mispred = 0;
+
 sim_bitvec* globals::bhr = nullptr;
 branch_predictor* globals::bpred = nullptr;
 
-static state_t *s = nullptr;
+state_t* globals::state = nullptr;
 
 template<typename X, typename Y>
 static inline void dump_histo(const std::string &fname,
@@ -52,7 +53,7 @@ static inline void dump_histo(const std::string &fname,
   std::ofstream out(fname);
   std::sort(sorted_by_cnt.begin(), sorted_by_cnt.end());
   for(auto it = sorted_by_cnt.rbegin(), E = sorted_by_cnt.rend(); it != E; ++it) {
-    uint32_t r_inst = *reinterpret_cast<uint32_t*>(s->mem + it->second);
+    uint32_t r_inst = *reinterpret_cast<uint32_t*>(globals::state->mem + it->second);
     r_inst = bswap<false>(r_inst);	
     auto s = getAsmString(r_inst, it->second);
     out << std::hex << it->second << ":"
@@ -158,26 +159,26 @@ int main(int argc, char *argv[]) {
   globals::sysArgc = buildArgcArgv(filename.c_str(),sysArgs,globals::sysArgv);
   initParseTables();
 
-  int rc = posix_memalign((void**)&s, pgSize, pgSize); 
-  initState(s);
-  s->maxicnt = maxinsns;
+  int rc = posix_memalign((void**)&globals::state, pgSize, pgSize); 
+  initState(globals::state);
+  globals::state->maxicnt = maxinsns;
 
 
 
   switch(branch_predictor::lookup_impl(bpred_impl))
     {
     case branch_predictor::bpred_impl::bimodal:
-      globals::bpred = new bimodal(s->icnt,lg_c_pht_sz,lg_pht_sz);
+      globals::bpred = new bimodal(globals::state->icnt,lg_c_pht_sz,lg_pht_sz);
       break;
     case branch_predictor::bpred_impl::gtagged:
-      globals::bpred = new gtagged(s->icnt);
+      globals::bpred = new gtagged(globals::state->icnt);
       break;
     case branch_predictor::bpred_impl::uberhistory:
-      globals::bpred = new uberhistory(s->icnt,lg_pht_sz);
+      globals::bpred = new uberhistory(globals::state->icnt,lg_pht_sz);
       break;
     case branch_predictor::bpred_impl::gshare:
     default:
-      globals::bpred = new gshare(s->icnt,lg_pht_sz);
+      globals::bpred = new gshare(globals::state->icnt,lg_pht_sz);
       break;
     }
   
@@ -192,44 +193,44 @@ int main(int argc, char *argv[]) {
 #endif
   assert(mempt != reinterpret_cast<void*>(-1));
   assert(madvise(mempt, 1UL<<32, MADV_DONTNEED)==0);
-  s->mem = reinterpret_cast<uint8_t*>(mempt);
-  if(s->mem == nullptr) {
+  globals::state->mem = reinterpret_cast<uint8_t*>(mempt);
+  if(globals::state->mem == nullptr) {
     std::cerr << "INTERP : couldn't allocate backing memory!\n";
     exit(-1);
   }
 
   if(loaddump) {
-    loadState(*s, filename.c_str());
+    loadState(*globals::state, filename.c_str());
  }
  else {
-   load_elf(filename.c_str(), s);
-   mkMonitorVectors(s);
+   load_elf(filename.c_str(), globals::state);
+   mkMonitorVectors(globals::state);
  }
 
   double runtime = timestamp();
   if(globals::isMipsEL) {
-    while(s->brk==0 and (s->icnt < s->maxicnt)) {
-      execMipsEL(s);
+    while(globals::state->brk==0 and (globals::state->icnt < globals::state->maxicnt)) {
+      execMipsEL(globals::state);
     }
   }
   else {
-    while(s->brk==0 and (s->icnt < s->maxicnt)) {
-      execMips(s);
+    while(globals::state->brk==0 and (globals::state->icnt < globals::state->maxicnt)) {
+      execMips(globals::state);
     }
   }
   runtime = timestamp()-runtime;
   
   if(hash) {
     std::fflush(nullptr);
-    std::cerr << *s << "\n";
+    std::cerr << *globals::state << "\n";
     std::cerr << "crc32=" << std::hex
-	      << crc32(s->mem, 1UL<<32)<<std::dec
+	      << crc32(globals::state->mem, 1UL<<32)<<std::dec
 	      << "\n";
   } 
   std::cerr << KGRN << "INTERP: "
 	    << runtime << " sec, "
-	    << s->icnt << " ins executed, "
-	    << (s->icnt/runtime)*1e-6 << "  megains / sec"
+	    << globals::state->icnt << " ins executed, "
+	    << (globals::state->icnt/runtime)*1e-6 << "  megains / sec"
 	    << KNRM  << "\n";
     
   std::cerr << KGRN << *(globals::bpred) << KNRM << "\n";
@@ -238,7 +239,7 @@ int main(int argc, char *argv[]) {
   std::cerr << "num mispredicted jr r31 = " << globals::num_jr_r31_mispred
 	    << "\n";
 
-  dump_histo("mispredicts.txt", globals::bpred->getMap(), s);
+  dump_histo("mispredicts.txt", globals::bpred->getMap(), globals::state);
   
   munmap(mempt, 1UL<<32);
   if(globals::sysArgv) {
@@ -247,7 +248,7 @@ int main(int argc, char *argv[]) {
     }
     delete [] globals::sysArgv;
   }
-  free(s);
+  free(globals::state);
   delete globals::bhr;
   delete globals::bpred;
   delete [] globals::rsb;

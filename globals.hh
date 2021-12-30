@@ -2,6 +2,7 @@
 #define __GLOBALSH__
 
 #include "sim_bitvec.hh"
+#include "state.hh"
 
 class branch_predictor;
 
@@ -17,6 +18,7 @@ namespace globals {
   extern uint32_t *rsb;
   extern uint64_t num_jr_r31;
   extern uint64_t num_jr_r31_mispred;
+  extern state_t *state;
 };
 
 #endif
