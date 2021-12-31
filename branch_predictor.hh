@@ -1,4 +1,4 @@
-#ifndef __bpred_hh__
+#ifndef __bpred_hh__x
 #define __bpred_hh__
 
 #include <cstdint>
@@ -34,6 +34,7 @@ public:
   virtual void get_stats(uint64_t &n_br, uint64_t &n_mis, uint64_t &n_inst) const;
   virtual bool predict(uint32_t, uint64_t &) const = 0;
   virtual void update(uint32_t, uint64_t, bool, bool) = 0;
+  virtual const char* getTypeString() const =  0;
   static bpred_impl lookup_impl(const std::string& impl_name);
   const std::map<uint32_t, uint64_t> &getMap() const {
     return mispredict_map;
@@ -45,21 +46,29 @@ public:
 
 class gshare : public branch_predictor {
 protected:
+  constexpr static const char* typeString = "gshare";  
   uint32_t lg_pht_entries = 0;
   twobit_counter_array *pht = nullptr;
 public:
   gshare(uint64_t &, uint32_t);
   ~gshare();
+  const char* getTypeString() const override {
+    return typeString;
+  }
   bool predict(uint32_t, uint64_t &) const override;
   void update(uint32_t addr, uint64_t idx, bool prediction, bool taken) override;
 };
 
 class gtagged : public branch_predictor {
 protected:
+  constexpr static const char* typeString = "gtagged";  
   std::map<uint64_t, uint8_t> pht;
 public:
   gtagged(uint64_t &);
   ~gtagged();
+  const char* getTypeString() const override {
+    return typeString;
+  }  
   bool predict(uint32_t, uint64_t &) const override;
   void update(uint32_t addr, uint64_t idx, bool prediction, bool taken) override;
 };
@@ -67,6 +76,7 @@ public:
 
 class bimodal : public branch_predictor {
 protected:
+  constexpr static const char* typeString = "bimodal";
   uint32_t lg_c_pht_entries = 0;
   uint32_t lg_pht_entries = 0 ;
   twobit_counter_array *c_pht = nullptr;
@@ -75,12 +85,16 @@ protected:
 public:
   bimodal(uint64_t &,uint32_t,uint32_t);
   ~bimodal();
+  const char *getTypeString() const override {
+    return typeString;    
+  }
   bool predict(uint32_t, uint64_t &) const override;
   void update(uint32_t addr, uint64_t idx, bool prediction, bool taken) override;
 };
 
 class uberhistory : public branch_predictor {
 protected:
+  constexpr static const char* typeString = "uberhistory";
   uint32_t lg_history_entries;
   struct entry {
     uint32_t pc;
@@ -91,11 +105,12 @@ protected:
 public:
   uberhistory(uint64_t &, uint32_t);
   ~uberhistory();
+  const char* getTypeString() const override {
+    return typeString;
+  }
   bool predict(uint32_t, uint64_t &) const override;
   void update(uint32_t addr, uint64_t idx, bool prediction, bool taken) override;
 };
-
-
 
 std::ostream &operator<<(std::ostream &, const branch_predictor&);
 

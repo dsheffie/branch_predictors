@@ -126,8 +126,8 @@ int main(int argc, char *argv[]) {
       ("file,f", po::value<std::string>(&filename), "mips binary")      
       ("hash,h", po::value<bool>(&hash), "hash memory at end of execution")
       ("maxinsns,m", po::value<uint64_t>(&maxinsns), "max instructions to execute")
-      ("bhr_len", po::value<size_t>(&bhr_len)->default_value(64), "branch history length")
-      ("lg_pht_sz", po::value<uint32_t>(&lg_pht_sz)->default_value(12), "lg2(pht) sz")
+      ("bhr_len", po::value<size_t>(&bhr_len)->default_value(32), "branch history length")
+      ("lg_pht_sz", po::value<uint32_t>(&lg_pht_sz)->default_value(16), "lg2(pht) sz")
       ("lg_rsb_sz", po::value<uint32_t>(&lg_rsb_sz)->default_value(2), "lg2(rsb) sz")
       ("lg_c_pht_sz", po::value<uint32_t>(&lg_c_pht_sz)->default_value(16), "lg2(choice pht) sz (bimodal predictor)")
       ("bpred_impl", po::value<std::string>(&bpred_impl), "branch predictor (string)")
@@ -251,7 +251,7 @@ int main(int argc, char *argv[]) {
 	    << (globals::state->icnt/runtime)*1e-6 << "  megains / sec"
 	    << KNRM  << "\n";
     
-  std::cerr << KGRN << *(globals::bpred) << KNRM << "\n";
+  std::cerr <<  *(globals::bpred) << "\n";
 
   std::cerr << "num jr r31 = " << globals::num_jr_r31 << "\n";
   std::cerr << "num mispredicted jr r31 = " << globals::num_jr_r31_mispred

@@ -180,6 +180,7 @@ std::ostream &operator<<(std::ostream &out, const branch_predictor& bp) {
   uint64_t n_br=0,n_mis=0, icnt = 0;
   bp.get_stats(n_br,n_mis,icnt);
   double br_r = static_cast<double>(n_br-n_mis) / n_br;
+  out << bp.getTypeString() << "\n";
   out << (100.0*br_r) << "\% of branches predicted correctly\n";
   out << 1000.0 * (static_cast<double>(n_mis) / icnt)
       << " mispredicts per kilo insn\n";
