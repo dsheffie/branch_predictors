@@ -56,11 +56,12 @@ public:
   void set_next_level(simCache *next_level);
   
   uint32_t index(uint32_t addr, uint32_t &l, uint32_t &t);
-  virtual void access(uint32_t addr, uint32_t num_bytes, opType o)=0;
+  virtual void access(uint32_t addr, uint32_t num_bytes, opType o) {return;}
   
   void read(uint32_t addr, uint32_t num_bytes);
   void write(uint32_t addr, uint32_t num_bytes);
-
+  virtual void flush() {return;}
+  
   const size_t &getHits() const {
     return hits;
   }
@@ -76,26 +77,12 @@ public:
 
 std::ostream &operator<<(std::ostream &out, const simCache &cache);
 
-class randomReplacementCache : public simCache {
-public:
-  randomReplacementCache(size_t bytes_per_line, size_t assoc, size_t num_sets, 
-			 std::string name, int latency, simCache *next_level);
-  ~randomReplacementCache();
-  void access(uint32_t addr, uint32_t num_bytes, opType o) override;
-  
-private:
-  /* all bits are valid */
-  uint8_t *allvalid;
-  /* cache valid bits */
-  uint8_t **valid;
-  /* cache tag bits */
-  uint32_t **tag;
-};
 
 class directMappedCache : public simCache {
 private:
   std::vector<uint32_t> tags;
   boost::dynamic_bitset<> valid;
+  void flush() override;
 public:
   directMappedCache(size_t bytes_per_line, size_t assoc, size_t num_sets,
 		    std::string name, int latency, simCache *next_level);
@@ -116,31 +103,9 @@ public:
   }
   ~fullAssocCache();
   void access(uint32_t addr, uint32_t num_bytes, opType o) override;
+  void flush() override;
 };
 
-class lowAssocCache : public simCache {
- public:
-  lowAssocCache(size_t bytes_per_line, size_t assoc, size_t num_sets, 
-		 std::string name, int latency, simCache *next_level);
-  ~lowAssocCache();
-  void access(uint32_t addr, uint32_t num_bytes, opType o) override;
-
- private:
-  void updateLRU(uint32_t idx,uint32_t w);
-  int32_t findLRU(uint32_t w);
-  
-  uint8_t *allvalid;
-
-  /* cache valid bits */
-   uint64_t *valid;
-   
-  /* tree-lru bits */
-   uint64_t *lru;
-  
-   /* cache tag bits */
-   uint32_t **tag;
-
-};
 
 class setAssocCache: public simCache {
  private:
@@ -186,6 +151,9 @@ class setAssocCache: public simCache {
     size_t size() const {
       return entries.size();
     }
+    void clear() {
+      entries.clear();
+    }
   };
   cacheset **sets;
   
@@ -194,63 +162,11 @@ public:
 		std::string name, int latency, simCache *next_level);
   ~setAssocCache();
   void access(uint32_t addr, uint32_t num_bytes, opType o) override;
+  void flush() override;
 };
 
 
-class fullRandAssocCache: public simCache {
- private:
-  std::unordered_set<uint32_t> entries;
-  std::vector<uint32_t> tags;
-public:
-  fullRandAssocCache(size_t bytes_per_line, size_t assoc, size_t num_sets, 
-		std::string name, int latency, simCache *next_level) :
-    simCache(bytes_per_line, assoc, num_sets, name, latency, next_level) {
-  }
-  ~fullRandAssocCache() {}
-  void access(uint32_t addr, uint32_t num_bytes, opType o) override;
-};
 
-
-class realLRUCache : public simCache {
- public:
-  realLRUCache(size_t bytes_per_line, size_t assoc, size_t num_sets, 
-		 std::string name, int latency, simCache *next_level);
-  ~realLRUCache();
-  void access(uint32_t addr, uint32_t num_bytes, opType o) override;
-private:
-  /* all bits are valid */
-  uint8_t *allvalid;
-  /* cache valid bits */
-   uint8_t **valid;
-   /* tree-lru bits */
-   uint64_t **lru;
-   /* cache tag bits */
-   uint32_t **tag;
-};
-
-/* This is too expensive to be used in practice */
-class highAssocCache : public simCache {
- public:
-  highAssocCache(size_t bytes_per_line, size_t assoc, size_t num_sets, 
-		 std::string name, int latency, simCache *next_level);
-  ~highAssocCache();
-  void access(uint32_t addr, uint32_t num_bytes, opType o) override;
-
- private:
-  void updateLRU(uint32_t idx,uint32_t w);
-  int32_t findLRU(uint32_t w);
-  
-  uint8_t *allvalid;
-  /* cache valid bits */
-   uint8_t **valid;
-   
-  /* tree-lru bits */
-   uint8_t **lru;
-  
-   /* cache tag bits */
-   uint32_t **tag;
-
-};
 
 #endif
 

@@ -687,7 +687,7 @@ void _monitorBody(uint32_t inst, state_t *s) {
   tms32_t tms32_buf;
   struct stat native_stat;
   stat32_t *host_stat = nullptr;
-
+  globals::L1D->flush();
   switch(reason)
     {
     case 6: /* int open(char *path, int flags) */

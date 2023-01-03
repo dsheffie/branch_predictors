@@ -49,6 +49,33 @@ public:
     }
     return seed;
   }
+  std::size_t hash(uint64_t bits) const noexcept {
+    bits = (bits == 0) || (bits > n_bits) ? n_bits : bits;    
+    std::size_t seed = 0;
+    int64_t words = static_cast<int64_t>((bits + bpw - 1) / bpw);
+    uint64_t leftover = bits % bpw;
+    E mask = (static_cast<E>(1) << leftover) - 1;
+    for(size_t w = 0; w < (words-1); ++w) {
+      boost::hash_combine(seed, arr[w]);
+    }
+    boost::hash_combine(seed, (arr[words-1] & mask));
+    return seed;
+  }
+  E xor_fold(uint64_t bits = 0) const noexcept {
+    bits = (bits == 0) || (bits > n_bits) ? n_bits : bits;    
+    E h = 0;
+    int64_t words = static_cast<int64_t>((bits + bpw - 1) / bpw);
+    uint64_t leftover = bits % bpw;
+    E mask = (static_cast<E>(1) << leftover) - 1;    
+    for(int64_t w = 0; w < (words-1); w++) {
+      h ^= arr[w];
+    }
+    h ^= (arr[words-1] & mask);
+    //std::cout << "mask = " << std::hex << mask << std::dec << "\n";
+    //std::cout << "leftover = " << leftover << "\n";
+    //std::cout << "h = " << h << "\n";
+    return h;
+  }
   std::size_t operator()() const noexcept {
     return hash();
   }
@@ -208,6 +235,6 @@ public:
   }
 };
 
-typedef sim_bitvec_template<uint64_t> sim_bitvec;
+typedef sim_bitvec_template<uint16_t> sim_bitvec;
 
 #endif

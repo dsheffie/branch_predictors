@@ -86,6 +86,11 @@ public:
     free(ptr);
     cnt--;
   }
+  void clear() {
+    while(cnt) {
+      pop_back();
+    }
+  }
   class const_iterator : public std::iterator<std::forward_iterator_tag, mylist> {
   protected:
     friend class mylist;

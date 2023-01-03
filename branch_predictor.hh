@@ -13,7 +13,8 @@
   BA(gshare)		    \
   BA(bimodal)		    \
   BA(gtagged)		    \
-  BA(uberhistory)
+  BA(uberhistory)	    \
+  BA(tage)
 
 class branch_predictor {
 public:
@@ -32,7 +33,7 @@ public:
   branch_predictor(uint64_t &icnt);
   virtual ~branch_predictor();
   virtual void get_stats(uint64_t &n_br, uint64_t &n_mis, uint64_t &n_inst) const;
-  virtual bool predict(uint32_t, uint64_t &) const = 0;
+  virtual bool predict(uint32_t, uint64_t &)  = 0;
   virtual void update(uint32_t, uint64_t, bool, bool) = 0;
   virtual const char* getTypeString() const =  0;
   static bpred_impl lookup_impl(const std::string& impl_name);
@@ -48,16 +49,58 @@ class gshare : public branch_predictor {
 protected:
   constexpr static const char* typeString = "gshare";  
   uint32_t lg_pht_entries = 0;
+  uint32_t pc_shift = 0;
   twobit_counter_array *pht = nullptr;
 public:
-  gshare(uint64_t &, uint32_t);
+  gshare(uint64_t & icnt, uint32_t lg_pht_entries, uint32_t pc_shift = 0);
   ~gshare();
   const char* getTypeString() const override {
     return typeString;
   }
-  bool predict(uint32_t, uint64_t &) const override;
+  bool predict(uint32_t, uint64_t &) override;
   void update(uint32_t addr, uint64_t idx, bool prediction, bool taken) override;
 };
+
+
+class tage : public branch_predictor {
+  struct tage_entry {
+    uint32_t pred : 2;
+    uint32_t useful : 2;
+    uint32_t tag : 12;
+    void clear() {
+      pred = 0;
+      useful = 0;
+      tag = 0;
+    }
+  };
+protected:
+  constexpr static const char* typeString = "tage";
+  
+  const int table_lengths[5] =  {256,128,64,32,16};
+  tage_entry *tage_tables[5] = {nullptr};
+  static const int n_tables = 5;
+  uint64_t hashes[5] = {0};
+
+  uint64_t pred_table[6] = {0};
+  uint64_t corr_pred_table[6] = {0};
+  
+  uint32_t lg_pht_entries = 0;
+  twobit_counter_array *pht = nullptr;
+
+  static uint32_t pc_hash(uint32_t pc) {
+    return (pc >> 2) & ((1U<<12)-1);
+  }
+  
+public:
+  tage(uint64_t & icnt, uint32_t lg_pht_entries);
+  ~tage();
+  const char* getTypeString() const override {
+    return typeString;
+  }
+  bool predict(uint32_t, uint64_t &) override;
+  void update(uint32_t addr, uint64_t idx, bool prediction, bool taken) override;
+};
+
 
 class gtagged : public branch_predictor {
 protected:
@@ -69,7 +112,7 @@ public:
   const char* getTypeString() const override {
     return typeString;
   }  
-  bool predict(uint32_t, uint64_t &) const override;
+  bool predict(uint32_t, uint64_t &) override;
   void update(uint32_t addr, uint64_t idx, bool prediction, bool taken) override;
 };
 
@@ -88,7 +131,7 @@ public:
   const char *getTypeString() const override {
     return typeString;    
   }
-  bool predict(uint32_t, uint64_t &) const override;
+  bool predict(uint32_t, uint64_t &) override;
   void update(uint32_t addr, uint64_t idx, bool prediction, bool taken) override;
 };
 
@@ -108,7 +151,7 @@ public:
   const char* getTypeString() const override {
     return typeString;
   }
-  bool predict(uint32_t, uint64_t &) const override;
+  bool predict(uint32_t, uint64_t &) override;
   void update(uint32_t addr, uint64_t idx, bool prediction, bool taken) override;
 };
 

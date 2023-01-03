@@ -111,9 +111,9 @@ int main(int argc, char *argv[]) {
   std::string sysArgs, filename, bpred_impl;
   uint64_t maxinsns = ~(0UL);
   bool hash = false,loaddump = false;
-  uint32_t assoc, l1d_sets, line_len;
+  int32_t assoc, l1d_sets, line_len;
   size_t bhr_len;
-  uint32_t lg_pht_sz, lg_c_pht_sz, lg_rsb_sz;
+  uint32_t lg_pht_sz, lg_c_pht_sz, lg_rsb_sz,pc_shift;
   po::options_description desc("Options");
   po::variables_map vm;
   
@@ -125,15 +125,16 @@ int main(int argc, char *argv[]) {
       ("dump,d", po::value<bool>(&loaddump)->default_value(false), "load a binary blob")
       ("file,f", po::value<std::string>(&filename), "mips binary")      
       ("hash,h", po::value<bool>(&hash), "hash memory at end of execution")
-      ("maxinsns,m", po::value<uint64_t>(&maxinsns), "max instructions to execute")
-      ("bhr_len", po::value<size_t>(&bhr_len)->default_value(32), "branch history length")
+      ("maxicnt,m", po::value<uint64_t>(&maxinsns), "max instructions to execute")
+      ("bhr_len", po::value<size_t>(&bhr_len)->default_value(256), "branch history length")
       ("lg_pht_sz", po::value<uint32_t>(&lg_pht_sz)->default_value(16), "lg2(pht) sz")
       ("lg_rsb_sz", po::value<uint32_t>(&lg_rsb_sz)->default_value(2), "lg2(rsb) sz")
       ("lg_c_pht_sz", po::value<uint32_t>(&lg_c_pht_sz)->default_value(16), "lg2(choice pht) sz (bimodal predictor)")
       ("bpred_impl", po::value<std::string>(&bpred_impl), "branch predictor (string)")
-      ("assoc", po::value<uint32_t>(&assoc)->default_value(8), "cache associativity")
-      ("sets", po::value<uint32_t>(&l1d_sets)->default_value(64), "cache sets")
-      ("line_len", po::value<uint32_t>(&line_len)->default_value(16), "cache line length")
+      ("assoc", po::value<int32_t>(&assoc)->default_value(-1), "cache associativity")
+      ("sets", po::value<int32_t>(&l1d_sets)->default_value(64), "cache sets")
+      ("line_len", po::value<int32_t>(&line_len)->default_value(16), "cache line length")
+      ("pc_shift", po::value<uint32_t>(&pc_shift)->default_value(0), "shift dist pc in gshare")
       ; 
     po::store(po::parse_command_line(argc, argv, desc), vm);
     po::notify(vm); 
@@ -175,7 +176,7 @@ int main(int argc, char *argv[]) {
     {
     case branch_predictor::bpred_impl::bimodal:
       globals::bpred = new bimodal(globals::state->icnt,lg_c_pht_sz,lg_pht_sz);
-      break;
+      break;      
     case branch_predictor::bpred_impl::gtagged:
       globals::bpred = new gtagged(globals::state->icnt);
       break;
@@ -183,9 +184,12 @@ int main(int argc, char *argv[]) {
       globals::bpred = new uberhistory(globals::state->icnt,lg_pht_sz);
       break;
     case branch_predictor::bpred_impl::gshare:
-    default:
-      globals::bpred = new gshare(globals::state->icnt,lg_pht_sz);
+      globals::bpred = new gshare(globals::state->icnt,lg_pht_sz,pc_shift);
       break;
+    case branch_predictor::bpred_impl::tage:
+    default:      
+      globals::bpred = new tage(globals::state->icnt,lg_pht_sz);
+      break;            
     }
   
 
@@ -214,8 +218,10 @@ int main(int argc, char *argv[]) {
    load_elf(filename.c_str(), globals::state);
    mkMonitorVectors(globals::state);
  }
-
-  if(assoc==1) {
+  if(assoc <= -0) {
+    globals::L1D = new simCache(line_len, 1, l1d_sets, "l1D", 1, nullptr);
+  }
+  else if(assoc==1) {
     globals::L1D = new directMappedCache(line_len, 1, l1d_sets, "l1D", 1, nullptr);
   }
   else if(l1d_sets==1) {
