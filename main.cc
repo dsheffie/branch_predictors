@@ -278,7 +278,6 @@ int main(int argc, char *argv[]) {
   delete globals::bhr;
   delete globals::bpred;
   delete [] globals::rsb;
-  std::cerr << *globals::L1D << "\n";
   delete globals::L1D;
 
   return 0;
