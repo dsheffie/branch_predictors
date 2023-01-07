@@ -5,6 +5,7 @@
 #include <cstring>
 #include <iostream>
 #include <cstring>
+#include <string>
 #include <boost/functional/hash.hpp>
 #include "helper.hh"
 
@@ -42,6 +43,7 @@ public:
 		     sizeof(E)*n_words);
     return (rc == 0);
   }
+
   std::size_t hash() const noexcept {
     std::size_t seed = 0;
     for(size_t w = 0; w < n_words; ++w) {
@@ -99,6 +101,13 @@ public:
     uint64_t w_idx = idx / bpw;
     uint64_t b_idx = idx % bpw;
     return (arr[w_idx] >> b_idx)&0x1;
+  }
+  std::string as_string() const {
+    std::string s;
+    for(ssize_t i = (n_bits-1); i >= 0; i--) {
+      s += get_bit(i) ? "1" : "0";
+    }
+    return s;
   }
   bool operator[](size_t idx) const {
     return get_bit(idx);

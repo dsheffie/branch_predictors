@@ -75,14 +75,17 @@ class tage : public branch_predictor {
   };
 protected:
   constexpr static const char* typeString = "tage";
-  
-  const int table_lengths[5] =  {256,128,64,32,16};
-  tage_entry *tage_tables[5] = {nullptr};
-  static const int n_tables = 5;
-  uint64_t hashes[5] = {0};
 
-  uint64_t pred_table[6] = {0};
-  uint64_t corr_pred_table[6] = {0};
+  static const int n_tables = 3;  
+  const int table_lengths[n_tables] =  {256,128,64};  
+
+
+  tage_entry *tage_tables[n_tables] = {nullptr};
+  uint64_t hashes[n_tables] = {0};
+  bool pred[n_tables] = {false};
+  bool pred_valid[n_tables] = {false};
+  uint64_t pred_table[n_tables+1] = {0};
+  uint64_t corr_pred_table[n_tables+1] = {0};
   
   uint32_t lg_pht_entries = 0;
   twobit_counter_array *pht = nullptr;
