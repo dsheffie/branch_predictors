@@ -1,7 +1,7 @@
 #define KEEP_BPRED_IMPL_IMPL
 #include "branch_predictor.hh"
 #include "globals.hh"
-
+#include <sstream>
 
 branch_predictor::branch_predictor(uint64_t &icnt):
   icnt(icnt), n_branches(0), n_mispredicts(0) {}
@@ -17,43 +17,35 @@ void branch_predictor::get_stats(uint64_t &n_br,
 branch_predictor::~branch_predictor() {}
 
 uberhistory::uberhistory(uint64_t &icnt, uint32_t lg_history_entries) :
-  branch_predictor(icnt), lg_history_entries(lg_history_entries) {
-  history_table = new entry[1UL<<lg_history_entries];
-  memset(history_table, 0, sizeof(entry)*(1UL<<lg_history_entries));
+  branch_predictor(icnt) {
 }
 
 uberhistory::~uberhistory() {
-  size_t used = 0, sz = 1UL<<lg_history_entries;
-  for(size_t i = 0 ; i < sz; i++) {
-    used += history_table[i].v;
-  }
+  size_t used = pht.size();
   std::cout << used << " valid entries in history table\n";
-  std::cout << static_cast<double>(used) / sz << " frac used\n";
-  delete [] history_table;
 }
 
 bool uberhistory::predict(uint32_t addr, uint64_t &idx)  {
+  idx = 0;
   sim_bitvec &h = *globals::bhr;
-  idx = h() % (1UL<<lg_history_entries);
-  entry &e = history_table[idx];
-  return e.p > 1;
+  std::stringstream ss;
+  ss << std::hex << (addr>>2) << std::dec;
+  
+  sidx = ss.str() + h.as_string();
+  
+  return pht[sidx] > 1;
 }
 
 void uberhistory::update(uint32_t addr, uint64_t idx, bool prediction, bool taken) {
-  //pht->update(idx, taken);
-  static const uint8_t next_t[4] = {1, 2, 3, 3};
-  static const uint8_t next_nt[4] = {0, 0, 1, 2};
-  entry &e = history_table[idx];
   bool mispredict = prediction != taken;
-  e.pc = addr;
-  e.v = true;
-  e.p = taken ? next_t[e.p & 3] : next_nt[e.p & 3];
-  n_branches++;
 
+  int32_t h = static_cast<int32_t>(pht[sidx]);
+  h = taken ? h+1 : h-1;
+  h = std::min(3, h);
+  h = std::max(0, h);
+  pht[sidx] = h;
+  n_branches++;
   if(mispredict) {
-    //if(addr == 0x204b0) {
-    //std::cout << (*globals::bhr) << "\n";
-    //}
     n_mispredicts++;
     mispredict_map[addr]++;
   }

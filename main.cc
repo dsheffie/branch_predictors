@@ -126,7 +126,7 @@ int main(int argc, char *argv[]) {
       ("file,f", po::value<std::string>(&filename), "mips binary")      
       ("hash,h", po::value<bool>(&hash), "hash memory at end of execution")
       ("maxicnt,m", po::value<uint64_t>(&maxinsns), "max instructions to execute")
-      ("bhr_len", po::value<size_t>(&bhr_len)->default_value(256), "branch history length")
+      ("bhr_len", po::value<size_t>(&bhr_len)->default_value(64), "branch history length")
       ("lg_pht_sz", po::value<uint32_t>(&lg_pht_sz)->default_value(16), "lg2(pht) sz")
       ("lg_rsb_sz", po::value<uint32_t>(&lg_rsb_sz)->default_value(2), "lg2(rsb) sz")
       ("lg_c_pht_sz", po::value<uint32_t>(&lg_c_pht_sz)->default_value(16), "lg2(choice pht) sz (bimodal predictor)")
@@ -159,9 +159,7 @@ int main(int argc, char *argv[]) {
     std::cerr << "INTERP : no file\n";
     return -1;
   }
-  
-  globals::bhr = new sim_bitvec(bhr_len);
-  
+   
   /* Build argc and argv */
   globals::sysArgc = buildArgcArgv(filename.c_str(),sysArgs,globals::sysArgv);
   initParseTables();
@@ -191,8 +189,12 @@ int main(int argc, char *argv[]) {
       globals::bpred = new tage(globals::state->icnt,lg_pht_sz);
       break;            
     }
-  
 
+  if(globals::bpred->needed_history_length()) {
+    bhr_len = globals::bpred->needed_history_length();
+  }
+  globals::bhr = new sim_bitvec(bhr_len);
+  
   
 #ifdef __linux__
   void* mempt = mmap(nullptr, 1UL<<32, PROT_READ | PROT_WRITE,

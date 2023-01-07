@@ -4,7 +4,7 @@
 #include <cstdint>
 #include <ostream>
 #include <map>
-#include <unordered_map>
+#include <string>
 #include "counter2b.hh"
 #include "sim_bitvec.hh"
 
@@ -35,6 +35,7 @@ public:
   virtual void get_stats(uint64_t &n_br, uint64_t &n_mis, uint64_t &n_inst) const;
   virtual bool predict(uint32_t, uint64_t &)  = 0;
   virtual void update(uint32_t, uint64_t, bool, bool) = 0;
+  virtual int needed_history_length() const { return 0; }
   virtual const char* getTypeString() const =  0;
   static bpred_impl lookup_impl(const std::string& impl_name);
   const std::map<uint32_t, uint64_t> &getMap() const {
@@ -78,8 +79,7 @@ protected:
 
   static const int n_tables = 3;  
   const int table_lengths[n_tables] =  {256,128,64};  
-
-
+  
   tage_entry *tage_tables[n_tables] = {nullptr};
   uint64_t hashes[n_tables] = {0};
   bool pred[n_tables] = {false};
@@ -102,6 +102,9 @@ public:
   }
   bool predict(uint32_t, uint64_t &) override;
   void update(uint32_t addr, uint64_t idx, bool prediction, bool taken) override;
+  int needed_history_length() const override {
+    return table_lengths[0];
+  }
 };
 
 
@@ -141,13 +144,8 @@ public:
 class uberhistory : public branch_predictor {
 protected:
   constexpr static const char* typeString = "uberhistory";
-  uint32_t lg_history_entries;
-  struct entry {
-    uint32_t pc;
-    uint8_t p;
-    bool v;
-  };
-  entry *history_table;
+  std::map<std::string, uint8_t> pht;
+  std::string sidx;
 public:
   uberhistory(uint64_t &, uint32_t);
   ~uberhistory();
