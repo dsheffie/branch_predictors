@@ -28,6 +28,7 @@ protected:
   uint64_t &icnt;
   uint64_t n_branches;
   uint64_t n_mispredicts;
+  uint64_t old_gbl_hist;
   std::map<uint32_t, uint64_t> mispredict_map;
 public:
   branch_predictor(uint64_t &icnt);
@@ -53,7 +54,7 @@ protected:
   uint32_t pc_shift = 0;
   twobit_counter_array *pht = nullptr;
 public:
-  gshare(uint64_t & icnt, uint32_t lg_pht_entries, uint32_t pc_shift = 0);
+  gshare(uint64_t & icnt, uint32_t lg_pht_entries, uint32_t pc_shift = 3);
   ~gshare();
   const char* getTypeString() const override {
     return typeString;
@@ -64,35 +65,42 @@ public:
 
 
 class tage : public branch_predictor {
-  struct tage_entry {
-    uint32_t pred : 2;
-    uint32_t useful : 2;
-    uint32_t tag : 12;
+  #define TAG_LEN 12
+  template<typename T, typename std::enable_if<std::is_integral<T>::value, T>::type* = nullptr>
+  struct te {
+    T pred : 2;
+    T useful : 2;
+    T tag : TAG_LEN;
     void clear() {
       pred = 0;
       useful = 0;
       tag = 0;
     }
   };
+  typedef te<uint64_t> tage_entry;
+  static uint32_t pc_hash(uint32_t pc) {
+    const uint32_t mask = ((1U<<TAG_LEN)-1);
+    return (pc >> 2) & mask;
+  }
+  #undef TAG_LEN
 protected:
   constexpr static const char* typeString = "tage";
 
   static const int n_tables = 3;  
-  const int table_lengths[n_tables] =  {256,128,64};  
+  const int table_lengths[n_tables] =  {256,32};  
   
   tage_entry *tage_tables[n_tables] = {nullptr};
   uint64_t hashes[n_tables] = {0};
   bool pred[n_tables] = {false};
   bool pred_valid[n_tables] = {false};
+  
+  //statistics
   uint64_t pred_table[n_tables+1] = {0};
   uint64_t corr_pred_table[n_tables+1] = {0};
   
   uint32_t lg_pht_entries = 0;
   twobit_counter_array *pht = nullptr;
 
-  static uint32_t pc_hash(uint32_t pc) {
-    return (pc >> 2) & ((1U<<12)-1);
-  }
   
 public:
   tage(uint64_t & icnt, uint32_t lg_pht_entries);

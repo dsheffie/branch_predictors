@@ -4,7 +4,7 @@
 #include <sstream>
 
 branch_predictor::branch_predictor(uint64_t &icnt):
-  icnt(icnt), n_branches(0), n_mispredicts(0) {}
+  icnt(icnt), n_branches(0), n_mispredicts(0), old_gbl_hist(0) {}
 
 void branch_predictor::get_stats(uint64_t &n_br,
 				 uint64_t &n_mis,
@@ -62,9 +62,6 @@ gshare::~gshare() {
   delete pht;
 }
 
-
-
-
 tage::tage(uint64_t &icnt, uint32_t lg_pht_entries) :
   branch_predictor(icnt),
   lg_pht_entries(lg_pht_entries){
@@ -89,8 +86,8 @@ tage::~tage() {
     double f = (static_cast<double>(corr_pred_table[h]) / pred_table[h]) * 100.0;
     std::cout << f << " percent correct "
 	      << pred_table[h] << " predictions, "
-	      << corr_pred_table[h] << " correct from table "
-	      << h << "\n";
+	      << corr_pred_table[h] << " correct from table len "
+	      << ((h==0) ? 0 : table_lengths[h-1]) << "\n";
   }
 }
 
@@ -118,7 +115,8 @@ bool tage::predict(uint32_t addr, uint64_t & idx) {
   }
   
   for(int h = 0; h < tage::n_tables; h++)  {
-    if(tage_tables[h][hashes[h]].tag == addr_hash) {
+    bool tag_match = tage_tables[h][hashes[h]].tag == addr_hash;
+    if(tag_match) {
       idx = (static_cast<uint64_t>(h+1) << 32) | hashes[h];
       prediction = (tage_tables[h][hashes[h]].pred > 1);
       hit = true;
@@ -151,27 +149,15 @@ void tage::update(uint32_t addr, uint64_t idx, bool prediction, bool taken) {
     pht->update(entry, taken);
   }
   else {
-    int t = table - 1;    
-    switch(tage_tables[t][entry].pred)
-      {
-      case 0:
-	tage_tables[t][entry].pred = taken ? 1 : 0;
-	break;
-      case 1:
-	tage_tables[t][entry].pred = taken ? 2 : 0;
-	break;
-      case 2:
-	tage_tables[t][entry].pred = taken ? 3 : 1;
-	break;
-      case 3:
-	tage_tables[t][entry].pred = taken ? 3 : 2;
-	break;
-      }
+    int t = table - 1;
+    int p = tage_tables[t][entry].pred;
+    p = taken ? p+1 : p-1;
+    p = std::max(0, p);
+    p = std::min(3, p);
+    tage_tables[t][entry].pred = p;
 
-    //update useful
-
-    for(int i = 0; i < 5; i++) {
-      if(pred_valid[i] && (i != t) && pred[i] != prediction) {
+    for(int i = 0; i < tage::n_tables; i++) {
+      if(pred_valid[i] && (i != t) && (pred[i] != prediction)) {
 	int u = tage_tables[t][entry].useful;
 	u = correct_pred ? u + 1 : u - 1;
 	u = (u > 3) ? 3 : u;
@@ -186,6 +172,19 @@ void tage::update(uint32_t addr, uint64_t idx, bool prediction, bool taken) {
   
   if(!correct_pred) {
     bool alloc = false;
+    int tagged_table = table - 1;
+    
+    //if(table == 1) printf("longest table mispredicted\n");
+    
+    for(int t = tagged_table+1; t < tage::n_tables; t++) {
+      
+      if(pred_valid[t] && (pred[t] == taken)) {
+	std::cout << "prediction from table " << table << " was incorrect but " << t << " was correct\n";
+	break;
+      }
+      
+    }
+    
     for(int t = table; t < tage::n_tables; t++) {
       if(tage_tables[t][hashes[t]].useful == 0) {
 	//std::cout << "allocate from table " << t << " for index " << entry << "\n";
@@ -195,6 +194,8 @@ void tage::update(uint32_t addr, uint64_t idx, bool prediction, bool taken) {
 	break;
       }
     }
+
+    
     if(!alloc) {
       for(int t = table; t < tage::n_tables; t++) {
 	int u = tage_tables[t][hashes[t]].useful;
@@ -219,33 +220,50 @@ void tage::update(uint32_t addr, uint64_t idx, bool prediction, bool taken) {
 
 
 bool gshare::predict(uint32_t addr, uint64_t &idx) {
-  addr = addr >> 2; //shift of bottom 2 bits
-  addr &= (1U<<16)-1; //mask off upper bits
+  uint64_t fold_bhr = globals::bhr->to_integer();
+  old_gbl_hist = fold_bhr;
   
-  //addr = addr << 12;
-  //uint64_t fold_bhr = globals::bhr->to_integer();
-  uint64_t fold_bhr = globals::bhr->to_integer();  
+  fold_bhr = (fold_bhr >> 32) ^ (fold_bhr & ((1UL<<32)-1));
+  fold_bhr = (fold_bhr >> 16) ^ (fold_bhr & ((1UL<<16)-1));
+
   idx =  (addr << pc_shift) ^ fold_bhr;
-  //std::cout << std::hex << addr << std::dec << " " << *globals::bhr << "\n";
-  //fold_bhr = (fold_bhr >> 32) ^ (fold_bhr & ((1UL<<32)-1));
-  //fold_bhr = (fold_bhr >> 16) ^ (fold_bhr & ((1UL<<16)-1));
-  //idx =  addr ^ fold_bhr;
-  //idx =  addr ^ globals::bhr->hash();
-  //if(addr == (0x204b0>>2)) {
-  //std::cout << "naive hash = " << std::hex
-  //<< globals::bhr->to_integer()
-  //	      << " boost hash = "
-  //<<  globals::bhr->hash()
-  //<< std::dec
-  //<< "\n";
-  //}  
-  idx &= (1UL << lg_pht_entries) - 1;
+
+
+  // if(addr == 0x21fd0) {
+    // std::cout << std::hex << addr
+    // 	      << " " << *globals::bhr << ", idx = " << idx
+    // 	      << " gbl hist = " << old_gbl_hist
+    // 	      << std::dec
+    // 	      << ", clamped idx = "
+    // 	      << (idx & ((1UL << lg_pht_entries) - 1))  
+    // 	      << "\n";
+  // }
+
+  idx &= (1UL << lg_pht_entries) - 1;  
   return pht->get_value(idx) > 1;
 }
 
 void gshare::update(uint32_t addr, uint64_t idx, bool prediction, bool taken) {
+
+  uint64_t fold_bhr = old_gbl_hist;
+  fold_bhr = (fold_bhr >> 32) ^ (fold_bhr & ((1UL<<32)-1));
+  fold_bhr = (fold_bhr >> 16) ^ (fold_bhr & ((1UL<<16)-1));
+
+  
+  // std::cout << std::hex << addr << std::dec << ":" << fold_bhr << ", idx = " << idx
+  // 	    << ", mispred = " << (prediction != taken)
+  // 	    << ", pred = " << prediction
+  // 	    << ", taken = " << taken
+  // 	    << ", gbl hist = " << std::hex << old_gbl_hist
+  // 	    << ", addr << pc_shift = " << (addr << pc_shift)
+  // 	    << ",xor'd = " << ((addr << pc_shift)^fold_bhr)
+  // 	    << std::dec 
+  // 	    <<"\n";
+  //}
+
   pht->update(idx, taken);
   n_branches++;
+
   if(prediction != taken) {
     n_mispredicts++;
     mispredict_map[addr]++;

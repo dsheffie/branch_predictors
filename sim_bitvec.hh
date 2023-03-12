@@ -234,6 +234,7 @@ public:
     }
   }
   E to_integer() const {
+    
     return arr[0];
   }
   friend std::ostream & operator<<(std::ostream &out, const sim_bitvec_template<E> &bv) {
@@ -244,6 +245,6 @@ public:
   }
 };
 
-typedef sim_bitvec_template<uint16_t> sim_bitvec;
+typedef sim_bitvec_template<uint64_t> sim_bitvec;
 
 #endif

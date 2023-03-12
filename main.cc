@@ -126,7 +126,7 @@ int main(int argc, char *argv[]) {
       ("file,f", po::value<std::string>(&filename), "mips binary")      
       ("hash,h", po::value<bool>(&hash), "hash memory at end of execution")
       ("maxicnt,m", po::value<uint64_t>(&maxinsns), "max instructions to execute")
-      ("bhr_len", po::value<size_t>(&bhr_len)->default_value(64), "branch history length")
+      ("bhr_len", po::value<size_t>(&bhr_len)->default_value(32), "branch history length")
       ("lg_pht_sz", po::value<uint32_t>(&lg_pht_sz)->default_value(16), "lg2(pht) sz")
       ("lg_rsb_sz", po::value<uint32_t>(&lg_rsb_sz)->default_value(2), "lg2(rsb) sz")
       ("lg_c_pht_sz", po::value<uint32_t>(&lg_c_pht_sz)->default_value(16), "lg2(choice pht) sz (bimodal predictor)")
@@ -134,7 +134,7 @@ int main(int argc, char *argv[]) {
       ("assoc", po::value<int32_t>(&assoc)->default_value(-1), "cache associativity")
       ("sets", po::value<int32_t>(&l1d_sets)->default_value(64), "cache sets")
       ("line_len", po::value<int32_t>(&line_len)->default_value(16), "cache line length")
-      ("pc_shift", po::value<uint32_t>(&pc_shift)->default_value(0), "shift dist pc in gshare")
+      ("pc_shift", po::value<uint32_t>(&pc_shift)->default_value(3), "shift dist pc in gshare")
       ; 
     po::store(po::parse_command_line(argc, argv, desc), vm);
     po::notify(vm); 
@@ -181,13 +181,14 @@ int main(int argc, char *argv[]) {
     case branch_predictor::bpred_impl::uberhistory:
       globals::bpred = new uberhistory(globals::state->icnt,lg_pht_sz);
       break;
+    case branch_predictor::bpred_impl::tage:
+      globals::bpred = new tage(globals::state->icnt,lg_pht_sz);
+      break;
+    default:            
     case branch_predictor::bpred_impl::gshare:
       globals::bpred = new gshare(globals::state->icnt,lg_pht_sz,pc_shift);
       break;
-    case branch_predictor::bpred_impl::tage:
-    default:      
-      globals::bpred = new tage(globals::state->icnt,lg_pht_sz);
-      break;            
+      
     }
 
   if(globals::bpred->needed_history_length()) {
